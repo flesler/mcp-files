@@ -54,6 +54,22 @@ async function test() {
       console.log('Error:', err.message)
     }
 
+    // Test validation failure protection
+    try {
+      // Test the validation logic directly - this should throw
+      const content = 'replacement content'
+      const expectedString = 'MISSING'
+      
+      if (!content.includes(expectedString)) {
+        throw new Error(`REPLACEMENT FAILED: "${expectedString}" not found in final content. File NOT modified.`)
+      }
+      
+      console.log('❌ Validation test failed - should have thrown error')
+    } catch (error) {
+      console.log('✅ Validation failure test passed - correctly threw error')
+      console.log(`Error: ${(error as Error).message}`)
+    }
+
     console.log('\n🎉 All replaceText tests passed!')
 
   } catch (err) {

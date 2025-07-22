@@ -1,95 +1,191 @@
 # MCP Tools
 
+[![npm version](https://img.shields.io/npm/v/mcp-tools.svg)](https://www.npmjs.com/package/mcp-tools)
+[![Node.js](https://img.shields.io/node/v/mcp-tools.svg)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Docker](https://img.shields.io/docker/v/flesler/mcp-tools?label=docker)](https://hub.docker.com/r/flesler/mcp-tools)
+
 A comprehensive MCP server providing helpful tools for AI agents like Cursor.
 
-## 🔧 Available Tools
+## 🚀 Quick Start
 
-### `read_symbol` - Code Symbol Extraction
-Find and extract code blocks by symbol name from files.
+### Option 1: NPX (Recommended)
 
-**Features:**
-- Precise line numbers for easy navigation
-- Multiple symbols and files support  
-- Enhanced regex patterns catch more edge cases
-- Works with TypeScript, JavaScript, Prisma, GraphQL
+Add to your MCP client config:
 
-**Usage:**
 ```bash
-mcp-tools read_symbol "User,Organization" src/types.ts
+{
+  "mcpServers": {
+    "mcp-tools": {
+      "command": "npx",
+      "args": ["-y", "mcp-tools"]
+    }
+  }
+}
 ```
 
-### `import_symbol` - Module Inspection
-Inspect types and structures from imports or modules.
-
-**Features:**
-- Node.js modules and packages
-- Relative imports from your codebase
-- Property inspection with dot notation
-- Dynamic imports with detailed type information
-
-**Usage:**
+### Option 2: Docker
 ```bash
-mcp-tools import_symbol lodash map
-mcp-tools import_symbol @prisma/client
+# Add to your MCP client config:
+{
+  "mcpServers": {
+    "mcp-tools": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "flesler/mcp-tools"
+      ]
+    }
+  }
+}
 ```
 
-### `replace_text` - Advanced Search & Replace
-Improved search and replace functionality that handles whitespace issues better than standard tools.
+### Option 3: Local Build
 
-**Features:**
-- Robust whitespace handling and normalization
-- Exact string matching with flexible whitespace
-- Clear error messages for failed matches
-- Safe file operations with backup validation
+Clone and build locally
 
-**Usage:**
+```bash
+git clone https://github.com/flesler/mcp-tools
+cd mcp-tools
+npm install && npm run build
+```
+
+Add to your MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "mcp-tools-local": {
+      "command": "node",
+      "args": ["dist/index.js"]
+    }
+  }
+}
+```
+
+## 🔧 Installation Examples
+
+### Cursor (`~/.cursor/mcp.json`)
+
+**Basic configuration (recommended):**
+```json
+{
+  "mcpServers": {
+    "mcp-tools": {
+      "command": "npx",
+      "args": ["-y", "mcp-tools"]
+    }
+  }
+}
+```
+
+**Docker configuration:**
+```json
+{
+  "mcpServers": {
+    "mcp-tools": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "flesler/mcp-tools"
+      ]
+    }
+  }
+}
+```
+
+**HTTP transport:**
+```json
+{
+  "mcpServers": {
+    "mcp-tools": {
+      "command": "npx",
+      "args": ["-y", "mcp-tools"],
+      "env": {
+        "TRANSPORT": "http",
+        "PORT": "3000"
+      }
+    }
+  }
+}
+```
+
+### Claude Desktop (`~/.config/claude_desktop_config.json`)
+
+**Basic setup:**
+```json
+{
+  "mcpServers": {
+    "mcp-tools": {
+      "command": "npx",
+      "args": ["-y", "mcp-tools"]
+    }
+  }
+}
+```
+
+## 🔧 Tools
+
+### `read_symbol`
+Find and extract code blocks by symbol name from files. Returns precise line numbers and full symbol definitions.
+
+```bash
+mcp-tools read_symbol "Tool,ToolConfig" src/types.ts
+```
+
+### `import_symbol`
+Inspect modules and imports to understand their structure and available properties.
+
+```bash
+mcp-tools import_symbol lodash get
+mcp-tools import_symbol ./utils helper
+```
+
+### `replace_text`
+Search and replace text in files with improved whitespace handling and clear error messages.
+
 ```bash
 mcp-tools replace_text src/app.ts "old code" "new code"
 ```
 
-### `os_notification` - Cross-Platform Notifications
-Send OS notifications across different platforms.
+### `os_notification`
+Send cross-platform OS notifications. Title defaults to current directory name.
 
-**Features:**
-- Linux (notify-send)
-- macOS (osascript)  
-- Windows/WSL (PowerShell, wsl-notify-send)
-- Memoized detection for optimal performance
-
-**Usage:**
 ```bash
-mcp-tools os_notification "Build complete" "Success"
+mcp-tools os_notification "Build complete"
+mcp-tools os_notification "Task done" "Custom Title"
 ```
 
-### `tools_debug` - Debug Information
-Get debug information about the MCP server and context.
+## 🎛️ Environment Variables
 
-**Usage:**
-```bash
-DEBUG=true mcp-tools tools_debug
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TRANSPORT` | `stdio` | Transport mode: `stdio` or `http` |
+| `PORT` | `4657` | HTTP server port (when `TRANSPORT=http`) |
+| `DEBUG` | `false` | Enable debug mode and `tools_debug` tool |
 
-## 🚀 Getting Started
-
-### Installation
+## 🖥️ Server Usage
 
 ```bash
-npm install -g mcp-tools
-```
+# Show help
+mcp-tools --help
 
-### MCP Server Usage
-
-**Stdio transport (default):**
-```bash
+# Default: stdio transport
 mcp-tools
-```
 
-**HTTP transport:**
-```bash
+# HTTP transport
 TRANSPORT=http mcp-tools
+TRANSPORT=http PORT=8080 mcp-tools
+
+# With debug mode
+DEBUG=true mcp-tools
 ```
 
-### CLI Usage
+## 💻 CLI Usage
 
 All tools can be used directly from the command line:
 
@@ -98,55 +194,22 @@ All tools can be used directly from the command line:
 mcp-tools read_symbol "MyInterface" src/types.ts
 
 # Inspect imports
-mcp-tools import_symbol lodash 
+mcp-tools import_symbol lodash get
 
 # Replace text with smart whitespace handling
 mcp-tools replace_text config.json "old_value" "new_value"
 
 # Send notifications
 mcp-tools os_notification "Task completed"
-
-# Debug info (when DEBUG=true)
-mcp-tools tools_debug
-```
-
-## 🔌 MCP Integration
-
-This server implements the [Model Context Protocol](https://modelcontextprotocol.io/) and can be used with MCP-compatible clients like:
-
-- **Cursor** - AI code editor
-- **Claude Desktop** - Anthropic's desktop app
-- **Other MCP clients**
-
-### Configuration Example
-
-Add to your MCP client configuration:
-
-```json
-{
-  "mcpServers": {
-    "mcp-tools": {
-      "command": "mcp-tools"
-    }
-  }
-}
 ```
 
 ## 🏗️ Architecture
 
-### Tool Structure
-Each tool is self-contained in `src/tools/` with:
-- Inline schema definition
-- Type-safe handlers
-- Comprehensive error handling
-- Performance optimizations
-
-### Key Features
-- ✅ **Type Safety** - Full TypeScript with Zod validation
-- ✅ **Performance** - Memoized detection and optimized execution  
-- ✅ **Cross-Platform** - Works on Linux, macOS, Windows, WSL
-- ✅ **Developer Friendly** - Clear error messages and helpful output
-- ✅ **MCP Compliant** - Full Model Context Protocol support
+- **Type-safe tools** with Zod validation
+- **Self-contained modules** in `src/tools/`
+- **Cross-platform support** (Linux, macOS, Windows, WSL)
+- **Performance optimized** with memoization
+- **Clear error handling** with descriptive messages
 
 ## 🧪 Development
 
@@ -163,18 +226,42 @@ npm run dev
 # Lint
 npm run lint:full
 
-# Test with CLI
-npm run ts src/index.ts read_symbol "symbolName" file.ts
+# Test
+npm run ts test/index.test.ts
+
+# CLI testing
+node dist/index.js read_symbol "functionName" file.ts
 ```
+
+## 🛠️ Troubleshooting
+
+### **Requirements**
+- **Node.js ≥20** - This package requires Node.js version 20 or higher
+
+### **Common Issues**
+
+**Tools not showing up in MCP client:**
+- Ensure the path to `dist/index.js` is correct and absolute
+- Check that the MCP server is properly configured in your client
+- Verify Node.js version is 20 or higher
+- Try restarting your MCP client after configuration changes
+
+**File operations failing:**
+- Ensure proper file permissions for the files you're trying to read/modify
+- Use absolute paths when possible for better reliability
+- Check that the target files exist and are accessible
 
 ## 📝 License
 
 MIT - see [LICENSE](LICENSE) file.
 
-## 🤝 Contributing
+## 🔗 Links
 
-Contributions welcome! This project provides essential tools for AI agents to interact with codebases effectively.
+- 📦 **[NPM Package](https://www.npmjs.com/package/mcp-tools)**
+- 🐙 **[GitHub Repository](https://github.com/flesler/mcp-tools)**
+- 🐛 **[Report Issues](https://github.com/flesler/mcp-tools/issues)**
+- 📚 **[MCP Specification](https://modelcontextprotocol.io/)**
 
 ---
 
-**Made for AI agents, by AI agents** 🤖✨
+**Built for AI agents** 🤖

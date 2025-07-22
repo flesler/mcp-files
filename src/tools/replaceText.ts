@@ -4,71 +4,55 @@ import { ToolConfig } from '../types.js'
 import util from '../util.js'
 
 const schema = z.object({
-  file_path: z.string().min(1).describe('The path to the file you want to search and replace in'),
-  old_string: z.string().min(1).describe('The text to replace (must be unique within the file)'),
-  new_string: z.string().describe('The replacement text'),
+  file_path: z.string().min(1).describe('Path to the file to modify (supports relative paths, absolute preferred)'),
+  old_string: z.string().min(1).describe('Exact text to replace (must be unique in file)'),
+  new_string: z.string().describe('Replacement text'),
 })
 
 const replaceTextTool: ToolConfig = {
   name: 'replace_text',
   schema,
-  description: `Improved search and replace functionality that handles whitespace issues better than standard tools.
-Features:
-- Robust whitespace handling and normalization
-- Exact string matching with flexible whitespace
-- Clear error messages for failed matches
-- Safe file operations with backup validation`,
+  description: 'Search and replace text in files with improved whitespace handling and clear error messages.',
   isReadOnly: false,
   handler: (args: z.infer<typeof schema>) => {
     const { file_path, old_string, new_string } = args
     const fullPath = path.resolve(file_path)
     const content = util.readResolvedFile(file_path)
 
+    // First try exact match
     if (content.includes(old_string)) {
       const newContent = content.replace(old_string, new_string)
-      util.writeFile(fullPath, newContent)
+      writeWithValidation(fullPath, newContent, new_string, file_path)
       return `Successfully replaced text in ${file_path}`
     }
 
-    const normalizedOldString = normalizeWhitespace(old_string)
-    const contentLines = content.split('\n')
-    let matchFound = false
-    let startLine = -1
-    let endLine = -1
+    // Try flexible whitespace matching - find text that normalizes to the same thing
+    const normalizedSearch = normalizeWhitespace(old_string)
+    let bestMatch: { start: number; end: number } | null = null
 
-    for (let i = 0; i < contentLines.length; i++) {
-      const searchStart = i
-      let accumulated = ''
-      let lineCount = 0
+    // Search through all possible substrings
+    for (let start = 0; start < content.length; start++) {
+      for (let end = start + Math.floor(old_string.length * 0.5); end <= start + Math.floor(old_string.length * 3); end++) {
+        if (end > content.length) break
 
-      for (let j = i; j < contentLines.length; j++) {
-        accumulated += (lineCount > 0 ? '\n' : '') + contentLines[j]
-        lineCount++
+        const candidate = content.substring(start, end)
+        const normalizedCandidate = normalizeWhitespace(candidate)
 
-        const normalizedAccumulated = normalizeWhitespace(accumulated)
-
-        if (normalizedAccumulated === normalizedOldString) {
-          matchFound = true
-          startLine = searchStart
-          endLine = j
-          break
-        }
-
-        if (normalizedAccumulated.length > normalizedOldString.length * 1.5) {
+        if (normalizedCandidate === normalizedSearch) {
+          bestMatch = { start, end }
           break
         }
       }
-
-      if (matchFound) break
+      if (bestMatch) break
     }
 
-    if (matchFound) {
-      const beforeLines = contentLines.slice(0, startLine)
-      const afterLines = contentLines.slice(endLine + 1)
-      const newLines = new_string.split('\n')
-      const newContent = [...beforeLines, ...newLines, ...afterLines].join('\n')
-      util.writeFile(fullPath, newContent)
-      return `Successfully replaced text in ${file_path} (lines ${startLine + 1}-${endLine + 1})`
+    if (bestMatch) {
+      // RUTHLESS replacement: insert new_string exactly as provided
+      const newContent = content.substring(0, bestMatch.start) +
+                        new_string +
+                        content.substring(bestMatch.end)
+      writeWithValidation(fullPath, newContent, new_string, file_path)
+      return `Successfully replaced text in ${file_path} (flexible whitespace match)`
     }
 
     const suggestions = findSimilarStrings(content, old_string)
@@ -80,18 +64,30 @@ Features:
         errorMsg += `\n${i + 1}. ${JSON.stringify(suggestion.text)} (${suggestion.similarity}% match)`
       })
     }
+
     return errorMsg
   },
 }
 
 export default replaceTextTool
 
+function writeWithValidation(filePath: string, content: string, expectedString: string, _originalPath: string): void {
+  // RUTHLESS VALIDATION: Ensure expectedString is actually in the final content BEFORE writing
+  if (!content.includes(expectedString)) {
+    throw new Error(`REPLACEMENT FAILED: "${expectedString}" not found in final content. File NOT modified.`)
+  }
+
+  // Only write if validation passes
+  util.writeFile(filePath, content)
+}
+
 function normalizeWhitespace(text: string): string {
   return text
     .replace(/\r\n/g, '\n')
-    .replace(/\t/g, '  ')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/[ \t]*\n[ \t]*/g, '\n')
+    .replace(/\s+/g, ' ')     // ALL whitespace (spaces, tabs, newlines) -> single space
+    .replace(/\(\s*\)/g, '()') // Empty parentheses: ( ) -> ()
+    .replace(/\{\s*\}/g, '{}') // Empty braces: { } -> {}
+    .replace(/\[\s*\]/g, '[]') // Empty brackets: [ ] -> []
     .trim()
 }
 
