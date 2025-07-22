@@ -12,7 +12,7 @@ const schema = z.object({
 const ID = 'search_replace'
 const searchReplace = defineTool({
   id: ID,
-  name: `${env.OVERRIDE_S_R ? 'better_' : ''}${ID}`,
+  name: `${env.OVERRIDE_S_R ? '': 'better_'}${ID}`,
   schema,
   description: 'Search and replace text in files with improved whitespace handling and clear error messages.',
   isReadOnly: false,

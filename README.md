@@ -42,29 +42,6 @@ Add to your MCP client config:
 }
 ```
 
-### Option 3: Local Build
-
-Clone and build locally
-
-```bash
-git clone https://github.com/flesler/mcp-files
-cd mcp-files
-npm install && npm run build
-```
-
-Add to your MCP client config:
-
-```json
-{
-  "mcpServers": {
-    "mcp-files-local": {
-      "command": "node",
-      "args": ["dist/index.js"]
-    }
-  }
-}
-```
-
 ## 🔧 Installation Examples
 
 ### Cursor (`~/.cursor/mcp.json`)
@@ -148,6 +125,8 @@ Add to your MCP client config:
 
 ## 🖥️ Server Usage
 
+You can either install and use `mcp-files` or `npx mcp-files`.
+
 ```bash
 # Show help
 mcp-files --help
@@ -219,8 +198,6 @@ node dist/index.js read_symbol "functionName" file.ts
 ### **Common Issues**
 
 **Tools not showing up in MCP client:**
-- Ensure the path to `dist/index.js` is correct and absolute
-- Check that the MCP server is properly configured in your client
 - Verify Node.js version is 20 or higher
 - Try restarting your MCP client after configuration changes
 
