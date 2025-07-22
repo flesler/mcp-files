@@ -3,19 +3,14 @@ import { z } from 'zod'
 import { ToolConfig } from '../types.js'
 
 const schema = z.object({
-  path: z.string().min(1).describe('Module or package path to inspect'),
-  property: z.string().optional().describe('Optional specific property to inspect within the module (supports dot notation)'),
+  path: z.string().min(1).describe('Module path to inspect (e.g., "lodash", "./utils", "fs")'),
+  property: z.string().optional().describe('Specific property to inspect (supports dot notation like "get" or "utils.helper")'),
 })
 
 const importSymbolTool: ToolConfig = {
   name: 'import_symbol',
   schema,
-  description: `Inspect types and structures from imports or modules.
-Supports:
-- Node.js modules and packages
-- Relative imports from your codebase
-- Property inspection with dot notation
-- Dynamic imports with detailed type information`,
+  description: 'Inspect modules and imports to understand their structure and available properties.',
   isReadOnly: true,
   handler: async (args: z.infer<typeof schema>) => {
     const { path: importPath, property } = args

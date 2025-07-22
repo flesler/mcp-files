@@ -1,10 +1,11 @@
+import { basename } from 'path'
 import { z } from 'zod'
 import { ToolConfig } from '../types.js'
 import util from '../util.js'
 
 const schema = z.object({
-  message: z.string().min(1).describe('The notification message to display'),
-  title: z.string().optional().describe('Optional notification title (defaults to "Agent")'),
+  message: z.string().min(1).describe('Notification message to display'),
+  title: z.string().optional().describe('Notification title (defaults to current directory name)'),
 })
 
 const osNotificationTool: ToolConfig = {
@@ -13,7 +14,7 @@ const osNotificationTool: ToolConfig = {
   description: 'Send cross-platform OS notifications',
   isReadOnly: true,
   handler: (args: z.infer<typeof schema>) => {
-    const { message, title = 'Agent' } = args
+    const { message, title = basename(util.CWD) } = args
     const strategy = detectAvailableStrategy()
 
     if (!strategy) {

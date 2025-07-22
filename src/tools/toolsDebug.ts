@@ -9,10 +9,7 @@ const schema = z.object({})
 const toolsDebugTool: ToolConfig = {
   name: 'tools_debug',
   schema,
-  description: util.trimLines(`
-    Get debug information about the MCP server and context
-    - ${pkg.name} is at version ${pkg.version}
-  `),
+  description: 'Get debug information about the MCP server environment and configuration.',
   isReadOnly: true,
   isEnabled: env.DEBUG,
   handler: (args: z.infer<typeof schema>) => {

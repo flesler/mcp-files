@@ -15,16 +15,16 @@ Server Usage:
 
 CLI Usage:
   ${cmd} read_symbol <symbols> <file1> [file2...]     # Find code blocks by symbol name
-  ${cmd} import_symbol <path> [property]              # Inspect modules and imports
-  ${cmd} replace_text <file> <old_text> <new_text>    # Advanced search and replace
-  ${cmd} os_notification <message> [title]            # Send OS notifications
-  ${cmd} tools_debug                                  # Debug server information
+  ${cmd} import_symbol <path> [property]              # Inspect modules and imports  
+  ${cmd} replace_text <file> <old_text> <new_text>    # Search and replace with whitespace handling
+  ${cmd} os_notification <message> [title]            # Send OS notifications (title defaults to current directory)
+  ${cmd} tools_debug                                  # Get debug information
 
 Examples:
   ${cmd} read_symbol "User,Organization" src/types.ts
-  ${cmd} import_symbol lodash map
+  ${cmd} import_symbol lodash get
   ${cmd} replace_text src/app.ts "old code" "new code"
-  ${cmd} os_notification "Build complete" "Success"
+  ${cmd} os_notification "Build complete"
   ${cmd} tools_debug
 `)
   process.exit(0)
