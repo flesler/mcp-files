@@ -1,6 +1,6 @@
 {
   "name": "mcp-files",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "type": "module",
   "description": "A comprehensive MCP server providing helpful tools for AI agents like Cursor",
   "main": "dist/index.js",
