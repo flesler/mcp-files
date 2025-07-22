@@ -9,7 +9,10 @@ const schema = z.object({})
 const utilsDebug = defineTool({
   id: 'utils_debug',
   schema: z.object({}),
-  description: 'Get debug information about available tools and environment.',
+  description: util.trimLines(`
+    Get debug information about available tools and environment.
+    - ${pkg.name} version: ${pkg.version}
+    `),
   isReadOnly: true,
   isEnabled: env.DEBUG,
   fromArgs: () => ({}),

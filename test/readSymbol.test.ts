@@ -233,9 +233,9 @@ function genericFunc<T>(param: T) {
 
   {
     name: 'Glob pattern handling (reported issue)',
-    source: 'model User {\n  id String\n}', // Will create .prisma files
-    symbols: ['User'],
-    expectedSymbols: ['User'],
+    source: 'model Tool {\n  id String\n}', // Will create .prisma files
+    symbols: ['Tool'],
+    expectedSymbols: ['Tool'],
   },
 
   {
@@ -250,6 +250,14 @@ function genericFunc<T>(param: T) {
     source: 'function commonFunc() { return 42 }', // Will be used to create multiple files
     symbols: ['commonFunc'],
     expectedSymbols: ['commonFunc'],
+  },
+
+  // Directory paths - FIXED: Now working with recursive glob
+  {
+    name: 'Directory paths (src/tools) - should auto-glob recursively',
+    source: 'export interface ToolConfig { name: string }',
+    symbols: ['ToolConfig'],
+    expectedSymbols: ['ToolConfig'],
   },
 ]
 

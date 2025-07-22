@@ -28,19 +28,22 @@ const readSymbol = defineTool({
     const maxResults = Math.max(symbols.length * 3, 10) // Allow more matches but still reasonable
 
     fileLoop: for (const filePath of expandedFiles) {
-      const fullPath = util.resolve(filePath)
-      const content = util.readFile(fullPath)
-      for (const symbol of symbols) {
-        const blocks = findBlocks(content, symbol)
-        if (!blocks.length) {
-          continue
-        }
-        results.push(...blocks.map(block => formatResult(block, symbol, filePath, showSymbolName)))
+      try {
+        const fullPath = util.resolve(filePath)
+        const content = util.readFile(fullPath)
+        for (const symbol of symbols) {
+          const blocks = findBlocks(content, symbol)
+          if (!blocks.length) {
+            continue
+          }
+          results.push(...blocks.map(block => formatResult(block, symbol, filePath, showSymbolName)))
 
-        // Early return if we have enough results across files
-        if (results.length >= maxResults) {
-          break fileLoop
+          // Early return if we have enough results across files
+          if (results.length >= maxResults) {
+            break fileLoop
+          }
         }
+      } catch {
       }
     }
     if (!results.length) {
@@ -84,31 +87,43 @@ function formatResult(block: Block, symbol: string, filePath: string, showSymbol
 function expandGlobPatterns(filePaths: string[]): string[] {
   return _(filePaths).flatMap(listFiles).uniq()
     .filter(file => !/\.map$/i.test(file))
+    .filter(file => {
+      // Filter out directories - only include files
+      try {
+        const stat = fs.statSync(util.resolve(file))
+        return stat.isFile()
+      } catch {
+        return true // Include if we can't stat (might be package, etc.)
+      }
+    })
     .sortBy(scoreFile).value()
 }
 
 function listFiles(file: string): string[] {
-  let path = util.resolve(file)
-  console.log({ path })
+  // Check for glob patterns first (before trying to stat)
+  if (file.includes('*') || file.includes('?') || file.includes('[')) {
+    try {
+      return glob(file)
+    } catch {
+      return []
+    }
+  }
+
   try {
+    const path = util.resolve(file)
     const stat = fs.statSync(path)
-    console.log({ stat })
     if (stat.isFile()) {
-      return [file]
+      return [path]
     }
     if (stat.isDirectory()) {
-      path += '/*'
+      return glob(`${path.replace(/\/$/, '')}/**/*`)
     }
   } catch {}
   try {
-    if (path.includes('*') || path.includes('?') || path.includes('[')) {
-      return globSync(path, { cwd: util.CWD, maxDepth: 2 })
-    }
-  } catch {}
-  try {
+    // Try as package
     return [getRequire().resolve(file)]
   } catch {
-    return [path]
+    return [file]
   }
 }
 
@@ -128,3 +143,7 @@ function scoreFile(file: string): number {
 const getRequire = _.memoize(() => {
   return createRequire(util.resolve('package.json'))
 })
+
+function glob(pattern: string): string[] {
+  return globSync(pattern, { cwd: util.CWD, maxDepth: 4 })
+}
