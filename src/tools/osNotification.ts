@@ -1,4 +1,3 @@
-import { execSync } from 'child_process'
 import _ from 'lodash'
 import { basename } from 'path'
 import { z } from 'zod'
@@ -23,8 +22,8 @@ const osNotification = defineTool({
     const { message, title = basename(util.CWD) } = args
     const strategy = getStrategy()
     const cmd = strategy.cmd(title, message)
-    execSync(cmd, { stdio: 'ignore' })
-    return `Notification sent via ${strategy.check}`
+    util.execSync(cmd, { stdio: 'ignore' })
+    return `Notification would have been sent via ${strategy.check} with title "${title}" and message "${message}"`
   },
 })
 
@@ -61,7 +60,7 @@ const strategies: NotificationStrategy[] = [
 const getStrategy = _.memoize((): NotificationStrategy => {
   for (const strategy of strategies) {
     try {
-      execSync(`command -v ${strategy.check}`, { stdio: 'ignore' })
+      util.execSync(`command -v ${strategy.check}`, { stdio: 'ignore' })
       return strategy
     } catch {
       // Try next strategy

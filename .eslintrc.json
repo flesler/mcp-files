@@ -1,7 +1,7 @@
 {
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": ["./tsconfig.json", "./bin/tsconfig.json"],
+    "project": ["./tsconfig.json", "./bin/tsconfig.json", "./test/tsconfig.json"],
     "ecmaVersion": 2022,
     "sourceType": "module",
     "warnOnUnsupportedTypeScriptVersion": false

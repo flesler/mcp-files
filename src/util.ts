@@ -1,3 +1,4 @@
+import { execSync } from 'child_process'
 import fs from 'fs'
 import { dirname, isAbsolute, resolve } from 'path'
 import { fileURLToPath } from 'url'
@@ -75,6 +76,8 @@ const util = {
     const fullPath = util.resolveAndValidateFile(filePath)
     return util.readFile(fullPath)
   },
+
+  execSync,
 }
 
 export default util

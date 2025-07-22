@@ -23,7 +23,6 @@ const readSymbol = defineTool({
   handler: (args: z.infer<typeof schema>) => {
     const { symbols, file_paths: filePaths } = args
     const expandedFiles = expandGlobPatterns(filePaths)
-    const showFilename = expandedFiles.length > 1
     const showSymbolName = symbols.length > 1
     const results: string[] = []
     for (const filePath of expandedFiles) {
@@ -33,7 +32,7 @@ const readSymbol = defineTool({
         if (!blocks.length) {
           continue
         }
-        results.push(...blocks.map(block => formatResult(block, symbol, filePath, showFilename, showSymbolName)))
+        results.push(...blocks.map(block => formatResult(block, symbol, filePath, showSymbolName)))
         if (results.length > symbols.length + 1) {
           throw new Error(`Too many symbol matches found (${results.length} matches for ${symbols.length} symbols). Please be more specific`)
         }
@@ -71,17 +70,13 @@ function findBlocks(content: string, symbol: string): Block[] {
   return results
 }
 
-function formatResult(block: Block, symbol: string, filePath: string, showFilename: boolean, showSymbolName: boolean): string {
-  const parts: string[] = []
+function formatResult(block: Block, symbol: string, filePath: string, showSymbolName: boolean): string {
+  // Match the format used by AIs in Cursor
+  let header = `${block.startLine}:${block.endLine}:${filePath}`
   if (showSymbolName) {
-    parts.push(symbol)
+    header = `${symbol} @ ${header}`
   }
-  if (showFilename) {
-    parts.push(filePath)
-  }
-  parts.push(`Lines ${block.startLine}-${block.endLine}`)
-  const header = `=== ${parts.join(' | ')} ===`
-  return `${header}\n${block.block}`
+  return `=== ${header} ===\n${block.block}`
 }
 
 function expandGlobPatterns(filePaths: string[]): string[] {

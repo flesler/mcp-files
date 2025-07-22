@@ -1,10 +1,14 @@
 import osNotificationTool from '../src/tools/osNotification.js'
+import util from '../src/util.js'
 
 async function test() {
   console.log('Testing osNotification tool...')
 
   try {
     try {
+      util.execSync = ((...args: any[]) => {
+        console.log('$ execSync', ...args)
+      }) as any
       const result1 = await osNotificationTool.handler({
         message: 'Test notification from mcp-files test suite',
         title: 'Test',

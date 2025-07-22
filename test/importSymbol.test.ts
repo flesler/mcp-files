@@ -7,7 +7,7 @@ async function test() {
     // Test 1: Import a simple built-in module property
     const result1 = await importSymbolTool.handler({
       module_path: 'path',
-      property: 'resolve'
+      property: 'resolve',
     })
     console.log('✅ Built-in module property test passed')
     console.log('Result preview:', result1.substring(0, 150) + '...')
@@ -15,7 +15,7 @@ async function test() {
     // Test 2: Import a utility function
     const result2 = await importSymbolTool.handler({
       module_path: 'path',
-      property: 'join'
+      property: 'join',
     })
     console.log('✅ Utility function test passed')
     console.log('Function type:', result2.includes('function'))
@@ -23,23 +23,27 @@ async function test() {
     // Test 3: Import fs module constants
     const result3 = await importSymbolTool.handler({
       module_path: 'fs',
-      property: 'constants'
+      property: 'constants',
     })
     console.log('✅ Module constants test passed')
     console.log('Has constants:', result3.includes('F_OK'))
 
-    // Test 4: Import non-existent property
-    const result4 = await importSymbolTool.handler({
-      module_path: 'path',
-      property: 'nonExistentProperty'
-    })
-    console.log('✅ Non-existent property test passed')
-    console.log('Result:', result4)
+    // Test 4: Import non-existent property (should throw)
+    try {
+      await importSymbolTool.handler({
+        module_path: 'path',
+        property: 'nonExistentProperty',
+      })
+      console.log('❌ Non-existent property test failed - should have thrown')
+    } catch (err: any) {
+      console.log('✅ Non-existent property test passed - correctly threw error')
+      console.log('Error:', err.message.includes('not found'))
+    }
 
     // Test 5: Import non-existent module (should throw)
     try {
       await importSymbolTool.handler({
-        module_path: 'this-module-definitely-does-not-exist-12345'
+        module_path: 'this-module-definitely-does-not-exist-12345',
       })
       console.log('❌ Non-existent module test failed - should have thrown')
     } catch (err: any) {
@@ -54,4 +58,4 @@ async function test() {
   }
 }
 
-test() 
+test()

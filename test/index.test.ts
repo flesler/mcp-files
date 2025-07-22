@@ -1,3 +1,7 @@
+if (process.env.SILENT === 'true') {
+  console.log = () => {}
+}
+
 console.log('🚀 Running all mcp-files tests...\n')
 
 async function runAllTests() {
@@ -36,4 +40,3 @@ async function runAllTests() {
 }
 
 runAllTests().catch(console.error)
- 
