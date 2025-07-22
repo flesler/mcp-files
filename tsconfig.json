@@ -1,27 +1,23 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
-    "moduleResolution": "node",
-    "outDir": "./dist",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "strict": true,
-    "useUnknownInCatchVariables": false,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "outDir": "./dist",
     "declaration": true,
-    "declarationMap": true,
+    "declarationDir": "./dist",
     "sourceMap": true,
-    "resolveJsonModule": true
+    "rootDir": "src",
+    "useUnknownInCatchVariables": false,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "declarationMap": true
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "test"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
