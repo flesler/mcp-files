@@ -16,14 +16,10 @@ const utilsDebug = defineTool({
   isReadOnly: true,
   isEnabled: env.DEBUG,
   fromArgs: () => ({}),
-  handler: (args: z.infer<typeof schema>) => {
+  handler: (args: z.infer<typeof schema>, context) => {
     return {
-      ...args,
-      processEnv: process.env,
-      argv: process.argv,
-      env,
-      version: pkg.version,
-      cwd: util.CWD,
+      ...args, processEnv: process.env, argv: process.argv,
+      env, context, version: pkg.version, CWD: util.CWD, REPO: util.REPO,
     }
   },
 })
