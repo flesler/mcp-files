@@ -7,16 +7,16 @@ import { fileURLToPath } from 'url'
 /** Object.keys() with more accurate types */
 export type KeysOf<T> = Array<keyof T>
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const CWD = process.env.WORKSPACE_FOLDER_PATHS || process.cwd()
 
 const util = {
   // From Cursor
-  CWD: process.env.WORKSPACE_FOLDER_PATHS || process.cwd(),
+  CWD,
   // Relative to the project root
-  ROOT,
+  REPO: resolve(dirname(fileURLToPath(import.meta.url)), '..'),
 
   /** Resolve a path relative to the project root (avoids __dirname recreation everywhere) */
-  resolve(path: string, dir = ROOT): string {
+  resolve(path: string, dir = CWD): string {
     if (isAbsolute(path)) {
       return path
     }

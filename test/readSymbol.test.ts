@@ -222,6 +222,35 @@ function genericFunc<T>(param: T) {
     symbols: ['genericFunc'],
     expectedSymbols: ['genericFunc'],
   },
+
+  // Reported issue tests - integrated into main suite
+  {
+    name: 'Directory auto-glob (reported issue)',
+    source: 'function hello() { return "world" }', // Will create files in directory
+    symbols: ['hello'],
+    expectedSymbols: ['hello'],
+  },
+
+  {
+    name: 'Glob pattern handling (reported issue)',
+    source: 'model User {\n  id String\n}', // Will create .prisma files
+    symbols: ['User'],
+    expectedSymbols: ['User'],
+  },
+
+  {
+    name: 'File extension handling (reported issue)',
+    source: 'function testFunc() { return "custom" }',
+    symbols: ['testFunc'],
+    expectedSymbols: ['testFunc'],
+  },
+
+  {
+    name: 'Multiple matches across files (reported issue)',
+    source: 'function commonFunc() { return 42 }', // Will be used to create multiple files
+    symbols: ['commonFunc'],
+    expectedSymbols: ['commonFunc'],
+  },
 ]
 
 async function test() {
@@ -237,13 +266,51 @@ async function test() {
       const testCase = testCases[i]
       console.log(`🔄 Test ${i + 1}/${totalTests}: ${testCase.name}`)
 
-      // Override temp file content with test source
-      fs.writeFileSync(tempFile, testCase.source.trim())
+      let testFilePath: string | string[] = tempFile
+      const tempFiles: string[] = []
 
       try {
+        // Special handling for reported issue tests
+        if (testCase.name.includes('Directory auto-glob')) {
+          // Create a directory with files inside
+          const tempDir = `/tmp/test-dir-${Date.now()}`
+          fs.mkdirSync(tempDir)
+          // Create some files in the directory
+          fs.writeFileSync(`${tempDir}/test1.ts`, testCase.source)
+          fs.writeFileSync(`${tempDir}/test2.js`, 'function other() { return 123 }')
+          testFilePath = tempDir // Pass directory directly
+          tempFiles.push(tempDir)
+        } else if (testCase.name.includes('Glob pattern')) {
+          // Create .prisma files for glob test
+          const file1 = 'test1.prisma'
+          const file2 = 'test2.prisma'
+          fs.writeFileSync(file1, testCase.source)
+          fs.writeFileSync(file2, 'model Post {\n  title String\n}')
+          tempFiles.push(file1, file2)
+          testFilePath = '*.prisma' // Use glob pattern
+        } else if (testCase.name.includes('File extension')) {
+          // Create file with custom extension
+          const customFile = 'test.custom'
+          fs.writeFileSync(customFile, testCase.source)
+          testFilePath = customFile
+          tempFiles.push(customFile)
+        } else if (testCase.name.includes('Multiple matches across files')) {
+          // Create multiple files with the same symbol
+          const files = []
+          for (let j = 1; j <= 5; j++) {
+            const file = testUtil.createTempFile(`multi${j}.ts`, `function testFunc${j}() { return ${j} }\n${testCase.source}`)
+            files.push(file)
+            tempFiles.push(file)
+          }
+          testFilePath = files
+        } else {
+          // Regular test - override temp file content
+          fs.writeFileSync(tempFile, testCase.source.trim())
+        }
+
         const result = await readSymbol.handler({
           symbols: testCase.symbols,
-          file_paths: [tempFile],
+          file_paths: Array.isArray(testFilePath) ? testFilePath : [testFilePath],
         })
 
         if (testCase.error) {
@@ -289,6 +356,22 @@ async function test() {
           console.log('❌ FAILED: Unexpected error')
           console.log(`   Error: ${err.message}`)
         }
+      } finally {
+        // Cleanup special test files
+        for (const path of tempFiles) {
+          try {
+            if (fs.existsSync(path)) {
+              const stat = fs.statSync(path)
+              if (stat.isDirectory()) {
+                fs.rmSync(path, { recursive: true, force: true })
+              } else {
+                fs.unlinkSync(path)
+              }
+            }
+          } catch (err) {
+            // Ignore cleanup errors
+          }
+        }
       }
 
       console.log() // Empty line between tests
@@ -301,6 +384,7 @@ async function test() {
     } else {
       console.log(`💥 ${totalTests - passedTests} tests failed`)
       console.log('\nThis helps identify which patterns the regex supports vs limitations')
+      throw new Error(`readSymbol tests failed: ${totalTests - passedTests}/${totalTests} tests failed`)
     }
 
   } finally {

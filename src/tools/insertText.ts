@@ -21,7 +21,7 @@ const insertText = defineTool({
   }),
   handler: (args: z.infer<typeof schema>) => {
     const { file_path: filePath, line_number: lineNumber, text } = args
-    const fullPath = util.resolve(filePath, util.CWD)
+    const fullPath = util.resolve(filePath)
     const content = util.readFile(fullPath)
     const lines = content.split('\n')
     if (lineNumber > lines.length + 1) {

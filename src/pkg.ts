@@ -2,7 +2,7 @@ import fs from 'fs'
 import util from './util.js'
 
 const pkg = JSON.parse(fs.readFileSync(
-  util.resolve('package.json'), 'utf8',
+  util.resolve('package.json', util.REPO), 'utf8',
 ))
 
 export default {

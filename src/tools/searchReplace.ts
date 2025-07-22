@@ -24,7 +24,7 @@ const searchReplace = defineTool({
   }),
   handler: (args: z.infer<typeof schema>) => {
     const { file_path: filePath, old_string: oldString, new_string: newString } = args
-    const fullPath = util.resolve(filePath, util.CWD)
+    const fullPath = util.resolve(filePath)
     const content = util.readFile(fullPath)
     let pattern = oldString
     if (!content.includes(pattern)) {

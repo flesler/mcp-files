@@ -20,7 +20,7 @@ const importSymbol = defineTool({
   handler: async (args: z.infer<typeof schema>) => {
     const { module_path: modulePath, property } = args
     const resolvedPath = modulePath.startsWith('.')
-      ? util.resolve(modulePath, util.CWD)
+      ? util.resolve(modulePath)
       : modulePath
     let module = await import(resolvedPath)
     if (module.default) {

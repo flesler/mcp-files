@@ -1,7 +1,7 @@
+import fs from 'fs'
 import { globSync } from 'glob'
 import _ from 'lodash'
 import { createRequire } from 'module'
-import path from 'path'
 import { z } from 'zod'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
@@ -25,8 +25,10 @@ const readSymbol = defineTool({
     const expandedFiles = expandGlobPatterns(filePaths)
     const showSymbolName = symbols.length > 1
     const results: string[] = []
-    for (const filePath of expandedFiles) {
-      const fullPath = util.resolve(filePath, util.CWD)
+    const maxResults = Math.max(symbols.length * 3, 10) // Allow more matches but still reasonable
+
+    fileLoop: for (const filePath of expandedFiles) {
+      const fullPath = util.resolve(filePath)
       const content = util.readFile(fullPath)
       for (const symbol of symbols) {
         const blocks = findBlocks(content, symbol)
@@ -34,12 +36,11 @@ const readSymbol = defineTool({
           continue
         }
         results.push(...blocks.map(block => formatResult(block, symbol, filePath, showSymbolName)))
-        if (results.length > symbols.length + 1) {
-          throw new Error(`Too many symbol matches found (${results.length} matches for ${symbols.length} symbols). Please be more specific`)
+
+        // Early return if we have enough results across files
+        if (results.length >= maxResults) {
+          break fileLoop
         }
-      }
-      if (results.length >= symbols.length) {
-        break
       }
     }
     if (!results.length) {
@@ -81,41 +82,49 @@ function formatResult(block: Block, symbol: string, filePath: string, showSymbol
 }
 
 function expandGlobPatterns(filePaths: string[]): string[] {
-  const expandedFiles: string[] = []
-  for (const file of filePaths) {
-    if (isPackageName(file)) {
-      expandedFiles.push(resolvePackageFile(file))
-    } else if (file.includes('*') || file.includes('?') || file.includes('[')) {
-      const matches = globSync(file)
-      expandedFiles.push(...matches)
-    } else {
-      expandedFiles.push(file)
-    }
-  }
-  const uniqueFiles = [...new Set(expandedFiles)]
-  return _.sortBy(uniqueFiles, scoreFile)
+  return _(filePaths).flatMap(listFiles).uniq()
+    .filter(file => !/\.map$/i.test(file))
+    .sortBy(scoreFile).value()
 }
+
+function listFiles(file: string): string[] {
+  let path = util.resolve(file)
+  console.log({ path })
+  try {
+    const stat = fs.statSync(path)
+    console.log({ stat })
+    if (stat.isFile()) {
+      return [file]
+    }
+    if (stat.isDirectory()) {
+      path += '/*'
+    }
+  } catch {}
+  try {
+    if (path.includes('*') || path.includes('?') || path.includes('[')) {
+      return globSync(path, { cwd: util.CWD, maxDepth: 2 })
+    }
+  } catch {}
+  try {
+    return [getRequire().resolve(file)]
+  } catch {
+    return [path]
+  }
+}
+
+// Prioritize index files, TS, etc. Those we know can have symbols
+const PRIORITY = ['index.', '.ts', '.js', '.json', '.graphql', '.prisma'].reverse()
 
 function scoreFile(file: string): number {
-  const ext = file.split('.').pop()?.toLowerCase()
-  if (ext === 'ts') return 100
-  if (ext === 'js') return 90
-  return 0
-}
-
-function isPackageName(file: string): boolean {
-  if (file.includes('/') && !file.startsWith('@')) return false
-  if (file.includes('\\')) return false
-  if (file.startsWith('@')) return true
-  return !file.includes('/') && !file.includes('\\')
-}
-
-function resolvePackageFile(packageName: string): string {
-  try {
-    const require = createRequire(path.join(util.CWD, 'package.json'))
-    const packagePath = require.resolve(packageName)
-    return packagePath
-  } catch (err) {
-    throw new Error(`Package '${packageName}' not found or not installed`)
+  let score = 0
+  for (let i = 0; i < PRIORITY.length; i++) {
+    if (file.includes(PRIORITY[i])) {
+      score -= i + 1
+    }
   }
+  return -score
 }
+
+const getRequire = _.memoize(() => {
+  return createRequire(util.resolve('package.json'))
+})
