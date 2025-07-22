@@ -1,7 +1,7 @@
 import { z, ZodSchema } from 'zod'
 
-export interface ToolConfig<S extends ZodSchema = ZodSchema> {
-  name: string
+export interface ToolConfig<N extends string, S extends ZodSchema = ZodSchema> {
+  name: N
   schema: S
   description: string
   isReadOnly?: boolean

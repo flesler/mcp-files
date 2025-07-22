@@ -3,6 +3,7 @@ const env = {
   PORT: readNumber('PORT', 4657),
   TRANSPORT: readString('TRANSPORT', 'stdio'),
   DEBUG: readBoolean('DEBUG', false),
+  OVERRIDE_S_R: readBoolean('OVERRIDE_S_R', false),
 }
 
 function readString(key: string, def: any): string {

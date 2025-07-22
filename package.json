@@ -1,11 +1,11 @@
 {
-  "name": "mcp-tools",
+  "name": "mcp-files",
   "version": "0.9.0",
   "type": "module",
   "description": "A comprehensive MCP server providing helpful tools for AI agents like Cursor",
   "main": "dist/index.js",
   "bin": {
-    "mcp-tools": "dist/index.js"
+    "mcp-files": "dist/index.js"
   },
   "files": [
     "dist/**/*",
@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc && chmod +x dist/index.js",
     "build:watch": "tsc --watch --incremental",
-    "clean": "npx rimraf dist/* *.tsbuildinfo",
+    "build:clean": "npx rimraf dist/* *.tsbuildinfo",
     "start": "node dist/index.js",
     "start:http": "TRANSPORT=http node dist/index.js",
     "dev": "npm run ts -- src/index.ts",
@@ -27,21 +27,20 @@
     "lint:fix": "npm run lint -- --fix",
     "lint:full": "npm run build && npm run lint",
     "prepublishOnly": "npm run lint:full",
-    "prepack": "npm run build",
+    "prepack": "npm run build:clean && npm run build",
     "publish:dry": "npm pack --dry-run",
     "publish:npm": "npm publish",
     "publish:docker": "bin/docker-publish.sh",
     "publish:all": "npm run publish:npm && npm run publish:docker && npm run publish:test",
-    "publish:test": "npx mcp-tools --help",
+    "publish:test": "npx mcp-files --help",
     "version:patch": "npm version patch",
     "version:minor": "npm version minor",
     "version:major": "npm version major"
   },
   "keywords": [
     "mcp",
-    "ai-tools",
     "cursor",
-    "agent-tools",
+    "claude",
     "model-context-protocol",
     "code-analysis",
     "symbol-search",
@@ -49,23 +48,25 @@
     "import-inspection",
     "notifications",
     "llm",
-    "claude"
+    "tools",
+    "files"
   ],
   "author": "Ariel Flesler <aflesler@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/flesler/mcp-tools.git"
+    "url": "git+https://github.com/flesler/mcp-files.git"
   },
-  "homepage": "https://github.com/flesler/mcp-tools#readme",
+  "homepage": "https://github.com/flesler/mcp-files#readme",
   "bugs": {
-    "url": "https://github.com/flesler/mcp-tools/issues"
+    "url": "https://github.com/flesler/mcp-files/issues"
   },
   "engines": {
     "node": ">=20.0.0"
   },
   "dependencies": {
     "fastmcp": "^3.9.0",
+    "glob": "^11.0.3",
     "lodash": "^4.17.21",
     "zod": "^3.22.0"
   },

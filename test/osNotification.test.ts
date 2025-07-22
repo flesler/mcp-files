@@ -6,7 +6,7 @@ async function test() {
   try {
     try {
       const result1 = await osNotificationTool.handler({
-        message: 'Test notification from mcp-tools test suite',
+        message: 'Test notification from mcp-files test suite',
         title: 'Test',
       })
       console.log('✅ Notification test passed')

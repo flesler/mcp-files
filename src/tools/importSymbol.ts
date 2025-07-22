@@ -1,44 +1,50 @@
 import _ from 'lodash'
+import path from 'path'
 import { z } from 'zod'
-import { ToolConfig } from '../types.js'
+import { defineTool } from '../tools.js'
+import util from '../util.js'
 
 const schema = z.object({
-  path: z.string().min(1).describe('Module path to inspect (e.g., "lodash", "./utils", "fs")'),
-  property: z.string().optional().describe('Specific property to inspect (supports dot notation like "get" or "utils.helper")'),
+  module_path: z.string().min(1).describe('Module path to import (e.g., "lodash", "./utils", "@package/name")'),
+  property: z.string().optional().describe('Optional property to access on the imported module'),
 })
 
-const importSymbolTool: ToolConfig = {
-  name: 'import_symbol',
+const importSymbol = defineTool({
+  id: 'import_symbol',
   schema,
-  description: 'Inspect modules and imports to understand their structure and available properties.',
+  description: 'Import and inspect JavaScript/TypeScript modules and their properties.',
   isReadOnly: true,
+  fromArgs: ([module_path = '', property]: string[]) => ({
+    module_path,
+    property: property || undefined,
+  }),
   handler: async (args: z.infer<typeof schema>) => {
-    const { path: importPath, property } = args
-
-    let module = await import(importPath)
+    const { module_path: modulePath, property } = args
+    const resolvedPath = modulePath.startsWith('.')
+      ? path.resolve(util.CWD, modulePath)
+      : modulePath
+    let module = await import(resolvedPath)
     if (module.default) {
       module = module.default
     }
     const target = property ? _.get(module, property) : module
     if (target === undefined) {
-      return `Property '${property}' not found in module '${importPath}'`
+      throw new Error(`Property '${property}' not found in module '${modulePath}'`)
     }
-
     const output: string[] = []
-    output.push(`=== ${importPath}${property ? `.${property}` : ''} ===`)
+    output.push(`=== ${modulePath}${property ? `.${property}` : ''} ===`)
     output.push(dumpValue(target))
     return output.join('\n')
   },
-}
+})
 
-export default importSymbolTool
+export default importSymbol
 
 const MAX_VALUE_LENGTH = 300
 
 function dumpValue(value: any): string {
   const type = typeof value
   const output: string[] = []
-
   if (type === 'object' && value !== null) {
     const keys = Object.keys(value).sort()
     if (keys.length > 0) {
@@ -63,14 +69,12 @@ function dumpValue(value: any): string {
 
 function dump(value: any): string {
   const type = typeof value
-
   if (type === 'function') {
     if (isClass(value)) {
       return `class ${getClassSignature(value)}`
     }
     return `function ${getFunctionSignature(value)}`
   }
-
   if (_.isArray(value)) {
     const json = JSON.stringify(value)
     if (json.length <= MAX_VALUE_LENGTH) {
@@ -79,7 +83,6 @@ function dump(value: any): string {
     const type = typeof value[0]
     return `${type}[${value.length}]`
   }
-
   if (_.isPlainObject(value)) {
     const json = JSON.stringify(value)
     if (json.length <= MAX_VALUE_LENGTH) {
@@ -88,7 +91,6 @@ function dump(value: any): string {
     const keys = Object.keys(value)
     return `object (${keys.length} properties)`
   }
-
   if (type === 'object' && value !== null) {
     return value.constructor.name
   }
@@ -103,8 +105,8 @@ function getFunctionSignature(func: Function): string {
   try {
     const str = func.toString()
     const match = str.match(/\(([^)]*)\)/)
-    if (match) {
-      const params = match[1].split(',').map(p => p.trim().split('=')[0].trim()).filter(p => p)
+    if (match?.[1]) {
+      const params = match[1].split(',').map(p => p.trim().split('=')[0]?.trim()).filter(Boolean)
       return `(${params.join(', ')})`
     }
     return '(...)'
@@ -116,8 +118,8 @@ function getFunctionSignature(func: Function): string {
 function getClassSignature(cls: Function): string {
   try {
     const match = cls.toString().match(/constructor\s*\(([^)]*)\)/)
-    if (match) {
-      const params = match[1].split(',').map(p => p.trim().split('=')[0].trim()).filter(p => p)
+    if (match?.[1]) {
+      const params = match[1].split(',').map(p => p.trim().split('=')?.[0]?.trim()).filter(p => p)
       return `(${params.join(', ')})`
     }
     return getFunctionSignature(cls)

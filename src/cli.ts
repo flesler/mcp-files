@@ -1,51 +1,32 @@
+import _ from 'lodash'
 import { ZodError } from 'zod'
-import tools from './tools.js'
-
-type Tools = typeof tools
-type ToolName = keyof Tools
-
-// Type-safe mapping from tool names to CLI argument parsers
-type ToolMapper = {
-  [K in ToolName]: (args: string[]) => Parameters<Tools[K]['handler']>[0]
-}
-
-const commands: ToolMapper = {
-  read_symbol: ([symbolsArg, ...files]: string[]) => ({
-    symbols: symbolsArg.split(',').map(s => s.trim()),
-    files,
-  }),
-  import_symbol: ([path, property]: string[]) => ({
-    path,
-    property: property || undefined,
-  }),
-  replace_text: ([file_path, old_string, new_string]: string[]) => ({
-    file_path,
-    old_string,
-    new_string,
-  }),
-  os_notification: ([message, title]: string[]) => ({
-    message,
-    title: title || undefined,
-  }),
-  debug: () => ({}),
-}
+import logger from './logger.js'
+import tools, { Tool } from './tools.js'
 
 const cli = {
-  isCommand: (arg: string) => arg in commands,
+  isCommand: (arg?: string) => arg && arg in tools,
 
   async run(args: string[]) {
+    const inputCmd = args.shift()!
+    const tool: Tool = (tools as any)[inputCmd]
+    if (!tool) {
+      throw new Error(`Unknown command: ${inputCmd}`)
+    }
+    const res = await this.runTool(tool, tool.fromArgs(args))
+    console.log(res)
+  },
+
+  async runTool(tool: any, args: object): Promise<string> {
     try {
-      const cmd = args.shift() as ToolName
-      let toolArgs: any = commands[cmd](args)
-      toolArgs = tools[cmd].schema.parse(toolArgs)
-      const res = await tools[cmd].handler(toolArgs)
-      console.log(res)
+      args = tool.schema.parse(args)
+      const res = await tool.handler(args)
+      return _.isString(res) ? res : JSON.stringify(res)
     } catch (err) {
+      const params: any = { name: tool.name, args, error: err.message }
       if (err instanceof ZodError) {
-        const issues = err.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ')
-        console.error(`Error: ${issues}`)
-        process.exit(1)
+        params.issues = err.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join(', ')
       }
+      logger.error('Tool execution failed', params)
       throw err
     }
   },

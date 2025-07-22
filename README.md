@@ -1,9 +1,9 @@
 # MCP Tools
 
-[![npm version](https://img.shields.io/npm/v/mcp-tools.svg)](https://www.npmjs.com/package/mcp-tools)
-[![Node.js](https://img.shields.io/node/v/mcp-tools.svg)](https://nodejs.org/)
+[![npm version](https://img.shields.io/npm/v/mcp-files.svg)](https://www.npmjs.com/package/mcp-files)
+[![Node.js](https://img.shields.io/node/v/mcp-files.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Docker](https://img.shields.io/docker/v/flesler/mcp-tools?label=docker)](https://hub.docker.com/r/flesler/mcp-tools)
+[![Docker](https://img.shields.io/docker/v/flesler/mcp-files?label=docker)](https://hub.docker.com/r/flesler/mcp-files)
 
 A comprehensive MCP server providing helpful tools for AI agents like Cursor.
 
@@ -16,9 +16,9 @@ Add to your MCP client config:
 ```bash
 {
   "mcpServers": {
-    "mcp-tools": {
+    "mcp-files": {
       "command": "npx",
-      "args": ["-y", "mcp-tools"]
+      "args": ["-y", "mcp-files"]
     }
   }
 }
@@ -29,13 +29,13 @@ Add to your MCP client config:
 # Add to your MCP client config:
 {
   "mcpServers": {
-    "mcp-tools": {
+    "mcp-files": {
       "command": "docker",
       "args": [
         "run",
         "--rm",
         "-i",
-        "flesler/mcp-tools"
+        "flesler/mcp-files"
       ]
     }
   }
@@ -47,8 +47,8 @@ Add to your MCP client config:
 Clone and build locally
 
 ```bash
-git clone https://github.com/flesler/mcp-tools
-cd mcp-tools
+git clone https://github.com/flesler/mcp-files
+cd mcp-files
 npm install && npm run build
 ```
 
@@ -57,7 +57,7 @@ Add to your MCP client config:
 ```json
 {
   "mcpServers": {
-    "mcp-tools-local": {
+    "mcp-files-local": {
       "command": "node",
       "args": ["dist/index.js"]
     }
@@ -73,9 +73,9 @@ Add to your MCP client config:
 ```json
 {
   "mcpServers": {
-    "mcp-tools": {
+    "mcp-files": {
       "command": "npx",
-      "args": ["-y", "mcp-tools"]
+      "args": ["-y", "mcp-files"]
     }
   }
 }
@@ -85,13 +85,13 @@ Add to your MCP client config:
 ```json
 {
   "mcpServers": {
-    "mcp-tools": {
+    "mcp-files": {
       "command": "docker",
       "args": [
         "run",
         "--rm",
         "-i",
-        "flesler/mcp-tools"
+        "flesler/mcp-files"
       ]
     }
   }
@@ -102,9 +102,9 @@ Add to your MCP client config:
 ```json
 {
   "mcpServers": {
-    "mcp-tools": {
+    "mcp-files": {
       "command": "npx",
-      "args": ["-y", "mcp-tools"],
+      "args": ["-y", "mcp-files"],
       "env": {
         "TRANSPORT": "http",
         "PORT": "3000"
@@ -120,45 +120,23 @@ Add to your MCP client config:
 ```json
 {
   "mcpServers": {
-    "mcp-tools": {
+    "mcp-files": {
       "command": "npx",
-      "args": ["-y", "mcp-tools"]
+      "args": ["-y", "mcp-files"]
     }
   }
 }
 ```
 
-## 🔧 Tools
+## 🛠️ **Available Tools**
 
-### `read_symbol`
-Find and extract code blocks by symbol name from files. Returns precise line numbers and full symbol definitions.
-
-```bash
-mcp-tools read_symbol "Tool,ToolConfig" src/types.ts
-```
-
-### `import_symbol`
-Inspect modules and imports to understand their structure and available properties.
-
-```bash
-mcp-tools import_symbol lodash get
-mcp-tools import_symbol ./utils helper
-```
-
-### `replace_text`
-Search and replace text in files with improved whitespace handling and clear error messages.
-
-```bash
-mcp-tools replace_text src/app.ts "old code" "new code"
-```
-
-### `os_notification`
-Send cross-platform OS notifications. Title defaults to current directory name.
-
-```bash
-mcp-tools os_notification "Build complete"
-mcp-tools os_notification "Task done" "Custom Title"
-```
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `read_symbol` | Find and extract code blocks by symbol name from files | `symbols[]`, `file_paths[]` |
+| `import_symbol` | Import and inspect JavaScript/TypeScript modules and their properties | `module_path`, `property?` |
+| `search_replace` | Search and replace text in files with flexible whitespace matching | `file_path`, `old_string`, `new_string` |
+| `insert_text` | Insert text at a specific line number in a file (1-based) | `file_path`, `line_number`, `text` |
+| `os_notification` | Send OS notifications using native notification systems | `message`, `title?` |
 
 ## 🎛️ Environment Variables
 
@@ -166,23 +144,23 @@ mcp-tools os_notification "Task done" "Custom Title"
 |----------|---------|-------------|
 | `TRANSPORT` | `stdio` | Transport mode: `stdio` or `http` |
 | `PORT` | `4657` | HTTP server port (when `TRANSPORT=http`) |
-| `DEBUG` | `false` | Enable debug mode and `tools_debug` tool |
+| `DEBUG` | `false` | Enable debug mode and `utils_debug` tool |
 
 ## 🖥️ Server Usage
 
 ```bash
 # Show help
-mcp-tools --help
+mcp-files --help
 
 # Default: stdio transport
-mcp-tools
+mcp-files
 
 # HTTP transport
-TRANSPORT=http mcp-tools
-TRANSPORT=http PORT=8080 mcp-tools
+TRANSPORT=http mcp-files
+TRANSPORT=http PORT=8080 mcp-files
 
 # With debug mode
-DEBUG=true mcp-tools
+DEBUG=true mcp-files
 ```
 
 ## 💻 CLI Usage
@@ -191,16 +169,16 @@ All tools can be used directly from the command line:
 
 ```bash
 # Find symbols in code
-mcp-tools read_symbol "MyInterface" src/types.ts
+mcp-files read_symbol "MyInterface" src/types.ts
 
 # Inspect imports
-mcp-tools import_symbol lodash get
+mcp-files import_symbol lodash get
 
 # Replace text with smart whitespace handling
-mcp-tools replace_text config.json "old_value" "new_value"
+mcp-files replace_text config.json "old_value" "new_value"
 
 # Send notifications
-mcp-tools os_notification "Task completed"
+mcp-files os_notification "Task completed"
 ```
 
 ## 🏗️ Architecture
@@ -257,9 +235,9 @@ MIT - see [LICENSE](LICENSE) file.
 
 ## 🔗 Links
 
-- 📦 **[NPM Package](https://www.npmjs.com/package/mcp-tools)**
-- 🐙 **[GitHub Repository](https://github.com/flesler/mcp-tools)**
-- 🐛 **[Report Issues](https://github.com/flesler/mcp-tools/issues)**
+- 📦 **[NPM Package](https://www.npmjs.com/package/mcp-files)**
+- 🐙 **[GitHub Repository](https://github.com/flesler/mcp-files)**
+- 🐛 **[Report Issues](https://github.com/flesler/mcp-files/issues)**
 - 📚 **[MCP Specification](https://modelcontextprotocol.io/)**
 
 ---

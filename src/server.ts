@@ -1,4 +1,6 @@
 import { FastMCP } from 'fastmcp'
+
+import cli from './cli'
 import env from './env.js'
 import logger from './logger.js'
 import pkg from './pkg.js'
@@ -20,10 +22,7 @@ for (const tool of Object.values(tools)) {
       uri: `resource://${tool.name}`,
       name: tool.description,
       mimeType: 'text/plain',
-      load() {
-        const result = tool.handler({} as any)
-        return Promise.resolve({ text: enforceString(result) })
-      },
+      load: () => cli.runTool(tool, []).then(text => ({ text })),
     })
   } else {
     // Register as tool with enhanced logging
@@ -36,15 +35,7 @@ for (const tool of Object.values(tools)) {
       name: tool.name,
       description: tool.description,
       parameters: tool.schema,
-      execute: async (args) => {
-        try {
-          const result = await tool.handler(args as any)
-          return enforceString(result)
-        } catch (err) {
-          logger.error(err)
-          throw err
-        }
-      },
+      execute: (args) => cli.runTool(tool, args),
     })
   }
 }
@@ -60,15 +51,8 @@ if (env.TRANSPORT === 'http') {
   await server.start({
     transportType: 'stdio',
   })
-}
 
-logger.log(`Started new server on ${env.TRANSPORT} mode`)
-
-function enforceString(value: any): string {
-  if (typeof value === 'string') {
-    return value
-  }
-  return JSON.stringify(value)
+  logger.log('Started new server', { transport: env.TRANSPORT })
 }
 
 export default server

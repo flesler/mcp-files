@@ -1,92 +1,125 @@
-/** This file is for the Cursor agent to extract code blocks by symbol name */
+import { globSync } from 'glob'
+import _ from 'lodash'
+import { createRequire } from 'module'
+import path from 'path'
 import { z } from 'zod'
-import { ToolConfig } from '../types.js'
+import { defineTool } from '../tools.js'
 import util from '../util.js'
 
 const schema = z.object({
   symbols: z.array(z.string().min(1)).describe('Symbol names to find (functions, classes, types, etc.)'),
-  files: z.array(z.string().min(1)).describe('File paths to search (supports relative paths, absolute preferred)'),
+  file_paths: z.array(z.string().min(1)).describe('File paths to search (supports relative paths, glob patterns, and package names)'),
 })
 
-const readSymbolTool: ToolConfig = {
-  name: 'read_symbol',
+const readSymbol = defineTool({
+  id: 'read_symbol',
   schema,
-  description: 'Find and extract code blocks by symbol name from files. Returns precise line numbers and full symbol definitions.',
+  description: 'Find and extract code blocks by symbol name from files. Supports glob patterns and package names for file matching.',
   isReadOnly: true,
+  fromArgs: ([symbols, ...paths]: string[]) => ({
+    symbols: symbols.split(',').map(s => s.trim()),
+    file_paths: paths,
+  }),
   handler: (args: z.infer<typeof schema>) => {
-    const { symbols, files } = args
-    const showFilename = files.length > 1
+    const { symbols, file_paths: filePaths } = args
+    const expandedFiles = expandGlobPatterns(filePaths)
+    const showFilename = expandedFiles.length > 1
+    const showSymbolName = symbols.length > 1
     const results: string[] = []
-
-    for (const filePath of files) {
+    for (const filePath of expandedFiles) {
       const content = util.readResolvedFile(filePath)
-
       for (const symbol of symbols) {
-        const codeBlocks = findCodeBlocks(content, symbol)
-
-        if (codeBlocks.length === 0) {
-          if (symbols.length === 1 && files.length === 1) {
-            return `Symbol '${symbol}' not found in ${filePath}`
-          }
+        const blocks = findBlocks(content, symbol)
+        if (!blocks.length) {
           continue
         }
-
-        results.push(formatResults(codeBlocks, symbol, filePath, showFilename, symbols.length > 1))
+        results.push(...blocks.map(block => formatResult(block, symbol, filePath, showFilename, showSymbolName)))
+        if (results.length > symbols.length + 1) {
+          throw new Error(`Too many symbol matches found (${results.length} matches for ${symbols.length} symbols). Please be more specific`)
+        }
+      }
+      if (results.length >= symbols.length) {
+        break
       }
     }
-
-    return results.length > 0 ? results.join('\n\n') : 'No symbols found in any files'
+    if (!results.length) {
+      throw new Error('No symbols found in any files')
+    }
+    return results.join('\n\n')
   },
-}
+})
 
-export default readSymbolTool
+export default readSymbol
 
-interface CodeBlock {
+interface Block {
   block: string
   startLine: number
   endLine: number
 }
 
-function findCodeBlocks(content: string, symbol: string): CodeBlock[] {
-  const regex = new RegExp(`^.*\\b${symbol}\\b.*\n?{(?:\n[ \t].*)*\n[ \t]*}?`, 'mg')
-  const matches = content.matchAll(regex)
-  if (!matches) return []
-
-  const results: CodeBlock[] = []
+function findBlocks(content: string, symbol: string): Block[] {
+  const regex = new RegExp(`^([ \t]*).*\\b${symbol}\\b.*(\\n\\1)?{(?:\\n\\1\\s+.*)*[^}]*}`, 'mg')
+  const matches = content.matchAll(regex) || []
+  const results: Block[] = []
   for (const match of matches) {
     const lines = content.substring(0, match.index).split('\n')
     const startLine = lines.length
     const matchLines = match[0].split('\n')
     const endLine = startLine + matchLines.length - 1
-
     results.push({ block: match[0].trim(), startLine, endLine })
   }
-
   return results
 }
 
-function formatResults(codeBlocks: CodeBlock[], symbol: string, filePath: string, showFilename: boolean, showSymbolName: boolean): string {
-  const results: string[] = []
-
-  for (const block of codeBlocks) {
-    const parts: string[] = []
-
-    // Add symbol name if multiple symbols
-    if (showSymbolName) {
-      parts.push(symbol)
-    }
-
-    // Add filename if multiple files
-    if (showFilename) {
-      parts.push(`in ${filePath}`)
-    }
-
-    // Add line range
-    parts.push(`(lines ${block.startLine}-${block.endLine})`)
-
-    const header = parts.length > 0 ? `=== ${parts.join(' ')} ===` : `=== ${symbol} ===`
-    results.push(`${header}\n${block.block}`)
+function formatResult(block: Block, symbol: string, filePath: string, showFilename: boolean, showSymbolName: boolean): string {
+  const parts: string[] = []
+  if (showSymbolName) {
+    parts.push(symbol)
   }
+  if (showFilename) {
+    parts.push(filePath)
+  }
+  parts.push(`Lines ${block.startLine}-${block.endLine}`)
+  const header = `=== ${parts.join(' | ')} ===`
+  return `${header}\n${block.block}`
+}
 
-  return results.join('\n\n')
+function expandGlobPatterns(filePaths: string[]): string[] {
+  const expandedFiles: string[] = []
+  for (const file of filePaths) {
+    if (isPackageName(file)) {
+      expandedFiles.push(resolvePackageFile(file))
+    } else if (file.includes('*') || file.includes('?') || file.includes('[')) {
+      const matches = globSync(file)
+      expandedFiles.push(...matches)
+    } else {
+      expandedFiles.push(file)
+    }
+  }
+  const uniqueFiles = [...new Set(expandedFiles)]
+  return _.sortBy(uniqueFiles, scoreFile)
+}
+
+function scoreFile(file: string): number {
+  const ext = file.split('.').pop()?.toLowerCase()
+  if (ext === 'ts') return 100
+  if (ext === 'js') return 90
+  return 0
+}
+
+function isPackageName(file: string): boolean {
+  if (file.includes('/') && !file.startsWith('@')) return false
+  if (file.includes('\\')) return false
+  if (file.startsWith('@')) return true
+  return !file.includes('/') && !file.includes('\\')
+}
+
+function resolvePackageFile(packageName: string): string {
+  try {
+    const require = createRequire(path.join(util.CWD, 'package.json'))
+    const packagePath = require.resolve(packageName)
+    return packagePath
+  } catch (err) {
+    throw new Error(`Package '${packageName}' not found or not installed`)
+  }
 }

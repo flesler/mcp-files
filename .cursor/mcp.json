@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "mcp-tools-local": {
+    "mcp-files-local": {
       "command": "node",
-      "args": ["/home/flesler/Code/mcp/mcp-tools/dist/index.js"],
+      "args": ["/home/flesler/Code/mcp/mcp-files/dist/index.js"],
       "env": {
         "DEBUG": "true"
       }

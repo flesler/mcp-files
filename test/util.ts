@@ -2,7 +2,7 @@ import fs from 'fs'
 
 const testUtil = {
   createTempFile(name: string, content: string): string {
-    const tempPath = `tmp/temp-${name}-${Date.now()}.test`
+    const tempPath = `/tmp/temp-${name}-${Date.now()}.test`
     fs.writeFileSync(tempPath, content)
     return tempPath
   },

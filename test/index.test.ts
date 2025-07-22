@@ -1,10 +1,10 @@
-console.log('🚀 Running all mcp-tools tests...\n')
+console.log('🚀 Running all mcp-files tests...\n')
 
 async function runAllTests() {
   const testModules = [
     'readSymbol.test.ts',
     'importSymbol.test.ts',
-    'replaceText.test.ts',
+    'searchReplace.test.ts',
     'osNotification.test.ts',
   ]
 
@@ -36,3 +36,4 @@ async function runAllTests() {
 }
 
 runAllTests().catch(console.error)
+ 

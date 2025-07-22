@@ -1,33 +1,34 @@
+import { execSync } from 'child_process'
+import _ from 'lodash'
 import { basename } from 'path'
 import { z } from 'zod'
-import { ToolConfig } from '../types.js'
+import { defineTool } from '../tools.js'
 import util from '../util.js'
 
 const schema = z.object({
-  message: z.string().min(1).describe('Notification message to display'),
-  title: z.string().optional().describe('Notification title (defaults to current directory name)'),
+  message: z.string().min(1).describe('The notification message to display'),
+  title: z.string().optional().describe('Optional notification title (defaults to current directory name)'),
 })
 
-const osNotificationTool: ToolConfig = {
-  name: 'os_notification',
+const osNotification = defineTool({
+  id: 'os_notification',
   schema,
-  description: 'Send cross-platform OS notifications',
+  description: 'Send OS notifications using native notification systems.',
   isReadOnly: true,
+  fromArgs: ([message = '', title = '']: string[]) => ({
+    message,
+    title: title || undefined,
+  }),
   handler: (args: z.infer<typeof schema>) => {
     const { message, title = basename(util.CWD) } = args
-    const strategy = detectAvailableStrategy()
-
-    if (!strategy) {
-      throw new Error('No notification method available. Install notify-send, osascript, powershell, or wsl-notify-send')
-    }
-
+    const strategy = getStrategy()
     const cmd = strategy.cmd(title, message)
-    util.execSync(cmd, { stdio: 'ignore' })
+    execSync(cmd, { stdio: 'ignore' })
     return `Notification sent via ${strategy.check}`
   },
-}
+})
 
-export default osNotificationTool
+export default osNotification
 
 interface NotificationStrategy {
   check: string
@@ -57,22 +58,14 @@ const strategies: NotificationStrategy[] = [
   },
 ]
 
-let availableStrategy: NotificationStrategy | null = null
-let detectionAttempted = false
-
-function detectAvailableStrategy(): NotificationStrategy | null {
-  if (detectionAttempted) return availableStrategy
-
-  detectionAttempted = true
+const getStrategy = _.memoize((): NotificationStrategy => {
   for (const strategy of strategies) {
     try {
-      util.execSync(`command -v ${strategy.check}`, { stdio: 'ignore' })
-      availableStrategy = strategy
+      execSync(`command -v ${strategy.check}`, { stdio: 'ignore' })
       return strategy
     } catch {
       // Try next strategy
     }
   }
-  availableStrategy = null
-  return null
-}
+  throw new Error('No notification method available. Install notify-send, osascript, powershell, or wsl-notify-send')
+})
