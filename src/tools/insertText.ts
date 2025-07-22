@@ -21,8 +21,8 @@ const insertText = defineTool({
   }),
   handler: (args: z.infer<typeof schema>) => {
     const { file_path: filePath, line_number: lineNumber, text } = args
-    const content = util.readResolvedFile(filePath)
-    const fullPath = util.resolveAndValidateFile(filePath)
+    const fullPath = util.resolve(filePath, util.CWD)
+    const content = util.readFile(fullPath)
     const lines = content.split('\n')
     if (lineNumber > lines.length + 1) {
       throw new Error(`Line number ${lineNumber} is beyond file length (${lines.length} lines). Maximum allowed: ${lines.length + 1}`)

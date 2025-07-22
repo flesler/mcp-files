@@ -26,7 +26,8 @@ const readSymbol = defineTool({
     const showSymbolName = symbols.length > 1
     const results: string[] = []
     for (const filePath of expandedFiles) {
-      const content = util.readResolvedFile(filePath)
+      const fullPath = util.resolve(filePath, util.CWD)
+      const content = util.readFile(fullPath)
       for (const symbol of symbols) {
         const blocks = findBlocks(content, symbol)
         if (!blocks.length) {

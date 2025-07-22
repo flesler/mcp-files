@@ -1,5 +1,4 @@
 import _ from 'lodash'
-import path from 'path'
 import { z } from 'zod'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
@@ -21,7 +20,7 @@ const importSymbol = defineTool({
   handler: async (args: z.infer<typeof schema>) => {
     const { module_path: modulePath, property } = args
     const resolvedPath = modulePath.startsWith('.')
-      ? path.resolve(util.CWD, modulePath)
+      ? util.resolve(modulePath, util.CWD)
       : modulePath
     let module = await import(resolvedPath)
     if (module.default) {

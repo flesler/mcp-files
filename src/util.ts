@@ -1,28 +1,34 @@
 import { execSync } from 'child_process'
 import fs from 'fs'
+import _ from 'lodash'
 import { dirname, isAbsolute, resolve } from 'path'
 import { fileURLToPath } from 'url'
 
 /** Object.keys() with more accurate types */
 export type KeysOf<T> = Array<keyof T>
 
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+
 const util = {
   // From Cursor
   CWD: process.env.WORKSPACE_FOLDER_PATHS || process.cwd(),
   // Relative to the project root
-  ROOT: resolve(dirname(fileURLToPath(import.meta.url)), '..'),
+  ROOT,
 
   /** Resolve a path relative to the project root (avoids __dirname recreation everywhere) */
-  resolve(path: string): string {
+  resolve(path: string, dir = ROOT): string {
     if (isAbsolute(path)) {
       return path
     }
-    return resolve(util.ROOT, path)
+    return resolve(dir, path)
   },
 
   readFile(path: string, def?: string): string {
     if (!util.exists(path)) {
-      return def || ''
+      if (_.isNil(def)) {
+        throw new Error(`File not found: ${path}`)
+      }
+      return def
     }
     return fs.readFileSync(path, 'utf-8')
   },
@@ -62,19 +68,6 @@ const util = {
 
   clamp(value: number, min: number, max: number): number {
     return Math.max(min, Math.min(value, max))
-  },
-
-  resolveAndValidateFile(filePath: string): string {
-    const fullPath = resolve(filePath)
-    if (!util.exists(fullPath)) {
-      throw new Error(`File not found: ${filePath}`)
-    }
-    return fullPath
-  },
-
-  readResolvedFile(filePath: string): string {
-    const fullPath = util.resolveAndValidateFile(filePath)
-    return util.readFile(fullPath)
   },
 
   execSync,

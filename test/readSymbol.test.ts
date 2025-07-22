@@ -19,15 +19,15 @@ export const myFunction = () => {
   return 'hello'
 }`,
     symbols: ['myFunction'],
-    expectedSymbols: ['myFunction']
+    expectedSymbols: ['myFunction'],
   },
 
   // One-liner functions
   {
     name: 'One-liner function',
-    source: `function quickFunc() { return 42 }`,
+    source: 'function quickFunc() { return 42 }',
     symbols: ['quickFunc'],
-    expectedSymbols: ['quickFunc']
+    expectedSymbols: ['quickFunc'],
   },
 
   // Multiple one-liners
@@ -38,7 +38,7 @@ function func1() { return 1 }
 function func2() { return 2 }
 function func3() { return 3 }`,
     symbols: ['func1', 'func2'],
-    expectedSymbols: ['func1', 'func2']
+    expectedSymbols: ['func1', 'func2'],
   },
 
   // Indented functions
@@ -56,7 +56,7 @@ function topLevel() {
     return nested
   }`,
     symbols: ['indentedFunction'],
-    expectedSymbols: ['indentedFunction']
+    expectedSymbols: ['indentedFunction'],
   },
 
   // Simple interface (works) vs complex class (limitation)
@@ -75,7 +75,7 @@ class MyClass {
   }
 }`,
     symbols: ['MyInterface', 'MyClass'],
-    expectedSymbols: ['MyInterface'] // Class has nested braces (methods), so not found
+    expectedSymbols: ['MyInterface'], // Class has nested braces (methods), so not found
   },
 
   // Word boundary test - should NOT match
@@ -86,7 +86,7 @@ function testFunction() { return 'exact' }
 function testFunction1() { return 'should not match' }
 function testFunctionABC() { return 'should not match' }`,
     symbols: ['testFunction'],
-    expectedSymbols: ['testFunction'] // Should only find the exact match
+    expectedSymbols: ['testFunction'], // Should only find the exact match
   },
 
   // Complex TypeScript (known limitation - don't try to match)
@@ -100,8 +100,8 @@ export function complexFunc<T, S>(
   return Promise.resolve(param as T & S)
 }`,
     symbols: ['complexFunc'],
-     // Known limitation - multi-line signatures don't work
-    error: 'No symbols found'
+    // Known limitation - multi-line signatures don't work
+    error: 'No symbols found',
   },
 
   // String literals with braces - overmatches (acceptable)
@@ -114,7 +114,7 @@ function realFunc() {
   return template + json
 }`,
     symbols: ['fake'],
-    expectedSymbols: ['fake'] // AI context will distinguish real vs string
+    expectedSymbols: ['fake'], // AI context will distinguish real vs string
   },
 
   // Mixed strings and real functions
@@ -127,7 +127,7 @@ function parseTemplate() {
 
 function isReal() { return true }`,
     symbols: ['isReal', 'notReal'],
-    expectedSymbols: ['isReal'] // Should only find the real function, not the one in the string
+    expectedSymbols: ['isReal'], // Should only find the real function, not the one in the string
   },
 
   // Symbol not found
@@ -138,8 +138,8 @@ function existingFunc() {
   return 'exists'
 }`,
     symbols: ['nonExistentSymbol'],
-    
-    error: 'No symbols found'
+
+    error: 'No symbols found',
   },
 
   // Mixed results - some found, some not
@@ -149,11 +149,11 @@ function existingFunc() {
 function foundFunc() { return 'found' }
 class FoundClass {}`,
     symbols: ['foundFunc', 'missingFunc', 'FoundClass'],
-    expectedSymbols: ['foundFunc', 'FoundClass'] // Should find 2 out of 3
+    expectedSymbols: ['foundFunc', 'FoundClass'], // Should find 2 out of 3
   },
 
   // Additional test cases for coverage
-  
+
   // Arrow functions
   {
     name: 'Arrow functions',
@@ -164,7 +164,7 @@ const arrowFunc = () => {
 
 const oneLineArrow = () => 'quick'`,
     symbols: ['arrowFunc'],
-    expectedSymbols: ['arrowFunc']
+    expectedSymbols: ['arrowFunc'],
   },
 
   // Object methods
@@ -181,7 +181,7 @@ const obj = {
   }
 }`,
     symbols: ['methodName'],
-    expectedSymbols: ['methodName']
+    expectedSymbols: ['methodName'],
   },
 
   // Async functions
@@ -193,7 +193,7 @@ async function asyncFunc() {
   return result
 }`,
     symbols: ['asyncFunc'],
-    expectedSymbols: ['asyncFunc']
+    expectedSymbols: ['asyncFunc'],
   },
 
   // Enums and types
@@ -209,7 +209,7 @@ type MyType = {
   prop: string
 }`,
     symbols: ['MyEnum', 'MyType'],
-    expectedSymbols: ['MyEnum', 'MyType']
+    expectedSymbols: ['MyEnum', 'MyType'],
   },
 
   // Generic functions
@@ -220,15 +220,15 @@ function genericFunc<T>(param: T) {
   return param
 }`,
     symbols: ['genericFunc'],
-    expectedSymbols: ['genericFunc']
-  }
+    expectedSymbols: ['genericFunc'],
+  },
 ]
 
 async function test() {
   console.log('Testing readSymbol tool with comprehensive test cases...\n')
   let passedTests = 0
   let totalTests = testCases.length
-  
+
   // Create one temp file and reuse it
   const tempFile = testUtil.createTempFile('readSymbol-test.ts', '')
 
@@ -236,7 +236,7 @@ async function test() {
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i]
       console.log(`🔄 Test ${i + 1}/${totalTests}: ${testCase.name}`)
-      
+
       // Override temp file content with test source
       fs.writeFileSync(tempFile, testCase.source.trim())
 
@@ -247,55 +247,55 @@ async function test() {
         })
 
         if (testCase.error) {
-          console.log(`❌ FAILED: Expected error but got result`)
+          console.log('❌ FAILED: Expected error but got result')
           console.log(`   Result preview: ${result.substring(0, 100)}...`)
           continue
         }
 
         // Check if expected symbols were found
         if (testCase.expectedSymbols) {
-          const foundAllExpected = testCase.expectedSymbols.every(symbol => 
-            result.includes(symbol)
+          const foundAllExpected = testCase.expectedSymbols.every(symbol =>
+            result.includes(symbol),
           )
-          
+
           if (foundAllExpected) {
-            console.log(`✅ PASSED: Found all expected symbols`)
+            console.log('✅ PASSED: Found all expected symbols')
             passedTests++
           } else {
-            console.log(`❌ FAILED: Missing expected symbols`)
+            console.log('❌ FAILED: Missing expected symbols')
             console.log(`   Expected: ${testCase.expectedSymbols.join(', ')}`)
             console.log(`   Result preview: ${result.substring(0, 150)}...`)
           }
         } else {
           // No specific expectations, just that it didn't error
-          console.log(`✅ PASSED: No error (as expected)`)
+          console.log('✅ PASSED: No error (as expected)')
           passedTests++
         }
 
       } catch (err: any) {
         if (testCase.error) {
           const matchesExpectedError = err.message.includes(testCase.error)
-          
+
           if (matchesExpectedError) {
-            console.log(`✅ PASSED: Correctly threw expected error`)
+            console.log('✅ PASSED: Correctly threw expected error')
             console.log(`   Error: ${err.message}`)
             passedTests++
           } else {
-            console.log(`❌ FAILED: Wrong error message`)
+            console.log('❌ FAILED: Wrong error message')
             console.log(`   Expected: ${testCase.error}`)
             console.log(`   Actual: ${err.message}`)
           }
         } else {
-          console.log(`❌ FAILED: Unexpected error`)
+          console.log('❌ FAILED: Unexpected error')
           console.log(`   Error: ${err.message}`)
         }
       }
-      
+
       console.log() // Empty line between tests
     }
 
     console.log(`\n🎯 Test Summary: ${passedTests}/${totalTests} tests passed`)
-    
+
     if (passedTests === totalTests) {
       console.log('🎉 All readSymbol tests passed!')
     } else {
@@ -309,5 +309,4 @@ async function test() {
   }
 }
 
-test().catch(console.error)
- 
+test()
