@@ -20,7 +20,7 @@ Server Usage:
   TRANSPORT=http ${cmd}      # Run MCP server with HTTP transport
 
 CLI Usage:
-  ${cmd} read_symbol <symbols> <file1> [file2...]     # Find code blocks by symbol name
+  ${cmd} read_symbol <symbol> <file1> [file2...]      # Find code blocks by symbol name
   ${cmd} import_symbol <module_path> [property]       # Inspect modules and imports  
   ${cmd} search_replace <file> <old_text> <new_text>    # Search and replace with whitespace handling
   ${cmd} insert_text <file> <line_number> <text>      # Insert text at specific line number (1-based)
@@ -28,7 +28,7 @@ CLI Usage:
   ${cmd} utils_debug                                  # Get debug information
 
 Examples:
-  ${cmd} read_symbol "Tool,ToolConfig" src/types.ts
+  ${cmd} read_symbol "ToolConfig" src/types.ts
   ${cmd} import_symbol lodash get
   ${cmd} search_replace src/app.ts "old code" "new code"
   ${cmd} insert_text src/app.ts 10 "console.log('debug')"

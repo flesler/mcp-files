@@ -1,6 +1,5 @@
 import { execSync } from 'child_process'
 import fs from 'fs'
-import { GlobOptions, globSync } from 'glob'
 import _ from 'lodash'
 import { dirname, isAbsolute, resolve } from 'path'
 import { fileURLToPath } from 'url'
@@ -72,10 +71,6 @@ const util = {
   },
 
   execSync,
-
-  glob(pattern: string, options: GlobOptions = {}): string[] {
-    return globSync(pattern, { ...options, cwd: util.CWD, maxDepth: 4 }) as string[]
-  },
 }
 
 export default util

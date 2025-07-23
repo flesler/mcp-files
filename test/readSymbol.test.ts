@@ -1,450 +1,498 @@
-import fs from 'fs'
-import readSymbol from '../src/tools/readSymbol.js'
-import testUtil from './util.js'
+import { Block, findBlocks } from '../src/tools/readSymbol.js'
 
 interface TestCase {
   name: string
-  source: string
-  symbols: string[]
-  expectedSymbols?: string[] // If provided, these symbols should be found
-  error?: string // If provided, should throw error with this message (partial match)
+  content: string
+  symbol: string
+  expectedCount: number
+  expectedFirst?: Partial<Block> // Expected properties of first result (highest scored)
 }
 
 const testCases: TestCase[] = [
   // Simple multi-line functions
   {
     name: 'Simple multi-line function',
-    source: `
+    content: `
 export const myFunction = () => {
   return 'hello'
 }`,
-    symbols: ['myFunction'],
-    expectedSymbols: ['myFunction'],
+    symbol: 'myFunction',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 4,
+    },
   },
 
   // One-liner functions
   {
     name: 'One-liner function',
-    source: 'function quickFunc() { return 42 }',
-    symbols: ['quickFunc'],
-    expectedSymbols: ['quickFunc'],
+    content: 'function quickFunc() { return 42 }',
+    symbol: 'quickFunc',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 1,
+      endLine: 1,
+    },
   },
 
-  // Multiple one-liners
+  // Multiple functions - test both are found, first one returned first (same scores)
   {
-    name: 'Multiple one-liner functions',
-    source: `
+    name: 'Multiple functions - both found',
+    content: `
 function func1() { return 1 }
-function func2() { return 2 }
-function func3() { return 3 }`,
-    symbols: ['func1', 'func2'],
-    expectedSymbols: ['func1', 'func2'],
+function func2() {
+  return 2
+}
+function func1() { return 'another' }`,
+    symbol: 'func1',
+    expectedCount: 2,
+    expectedFirst: {
+      startLine: 2, // First occurrence is returned first when scores are equal
+      endLine: 2,
+    },
   },
 
-  // Indented functions
+  // Indented function
   {
     name: 'Indented function',
-    source: `
-function topLevel() {
-  return "top"
-}
-
-  function indentedFunction() {
-    const nested = {
-      key: "value"
-    }
-    return nested
-  }`,
-    symbols: ['indentedFunction'],
-    expectedSymbols: ['indentedFunction'],
-  },
-
-  // Simple interface (works) vs complex class (limitation)
-  {
-    name: 'Simple interface vs complex class',
-    source: `
-interface MyInterface {
-  name: string
-}
-
+    content: `
 class MyClass {
-  constructor() {}
-  
-  method() {
-    return 'method'
+  myMethod() {
+    return 'nested'
   }
 }`,
-    symbols: ['MyInterface', 'MyClass'],
-    expectedSymbols: ['MyInterface'], // Class has nested braces (methods), so not found
+    symbol: 'myMethod',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 3,
+      endLine: 5,
+    },
   },
 
-  // Word boundary test - should NOT match
+  // TypeScript interface
   {
-    name: 'Word boundary test',
-    source: `
-function testFunction() { return 'exact' }
-function testFunction1() { return 'should not match' }
-function testFunctionABC() { return 'should not match' }`,
-    symbols: ['testFunction'],
-    expectedSymbols: ['testFunction'], // Should only find the exact match
-  },
-
-  // Complex TypeScript (known limitation - don't try to match)
-  {
-    name: 'Complex TypeScript function (known limitation)',
-    source: `
-export function complexFunc<T, S>(
-  param: T,
-  config: S
-): Promise<T & S> {
-  return Promise.resolve(param as T & S)
+    name: 'TypeScript interface',
+    content: `
+interface MyInterface {
+  prop: string
+  method(): void
 }`,
-    symbols: ['complexFunc'],
-    // Known limitation - multi-line signatures don't work
-    error: 'No symbols found',
+    symbol: 'MyInterface',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 5,
+    },
   },
 
-  // String literals with braces - overmatches (acceptable)
+  // Class definition
   {
-    name: 'String literals with braces (overmatch is OK)',
-    source: `
-function realFunc() {
-  const template = "function fake() { return 'fake' }"
-  const json = '{"key": "value"}'
-  return template + json
+    name: 'Class definition',
+    content: `
+export class MyClass {
+  constructor(private name: string) {}
+  
+  getName() {
+    return this.name
+  }
 }`,
-    symbols: ['fake'],
-    expectedSymbols: ['fake'], // AI context will distinguish real vs string
+    symbol: 'MyClass',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 8,
+    },
   },
 
-  // Mixed strings and real functions
+  // Arrow functions - only matches ones with braces
   {
-    name: 'Mixed strings and real functions',
-    source: `
-function parseTemplate() {
-  return "function notReal() { return false }"
-}
-
-function isReal() { return true }`,
-    symbols: ['isReal', 'notReal'],
-    expectedSymbols: ['isReal'], // Should only find the real function, not the one in the string
-  },
-
-  // Symbol not found
-  {
-    name: 'Symbol not found',
-    source: `
-function existingFunc() {
-  return 'exists'
-}`,
-    symbols: ['nonExistentSymbol'],
-
-    error: 'No symbols found',
-  },
-
-  // Mixed results - some found, some not
-  {
-    name: 'Mixed results',
-    source: `
-function foundFunc() { return 'found' }
-class FoundClass {}`,
-    symbols: ['foundFunc', 'missingFunc', 'FoundClass'],
-    expectedSymbols: ['foundFunc', 'FoundClass'], // Should find 2 out of 3
-  },
-
-  // Additional test cases for coverage
-
-  // Arrow functions
-  {
-    name: 'Arrow functions',
-    source: `
+    name: 'Arrow functions with braces',
+    content: `
 const arrowFunc = () => {
-  return 'arrow'
+  console.log('arrow')
 }
-
-const oneLineArrow = () => 'quick'`,
-    symbols: ['arrowFunc'],
-    expectedSymbols: ['arrowFunc'],
+const arrowFunc2 = () => console.log('inline')`,
+    symbol: 'arrowFunc',
+    expectedCount: 1, // Only finds the one with braces
+    expectedFirst: {
+      startLine: 2,
+      endLine: 4,
+    },
   },
 
   // Object methods
   {
     name: 'Object methods',
-    source: `
+    content: `
 const obj = {
-  methodName() {
-    return 'method'
-  },
-  
-  arrowMethod: () => {
-    return 'arrow method'  
+  myMethod() {
+    return 'object method'
   }
 }`,
-    symbols: ['methodName'],
-    expectedSymbols: ['methodName'],
+    symbol: 'myMethod',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 3,
+      endLine: 5,
+    },
   },
 
-  // Async functions
+  // TypeScript types
   {
-    name: 'Async functions',
-    source: `
-async function asyncFunc() {
-  await something()
-  return result
-}`,
-    symbols: ['asyncFunc'],
-    expectedSymbols: ['asyncFunc'],
-  },
-
-  // Enums and types
-  {
-    name: 'Enums and type definitions',
-    source: `
-enum MyEnum {
-  VALUE1 = 'value1',
-  VALUE2 = 'value2'
-}
-
+    name: 'TypeScript type alias',
+    content: `
 type MyType = {
-  prop: string
+  id: number
+  name: string
 }`,
-    symbols: ['MyEnum', 'MyType'],
-    expectedSymbols: ['MyEnum', 'MyType'],
+    symbol: 'MyType',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 5,
+    },
   },
 
-  // Generic functions
+  // Enums
   {
-    name: 'Generic functions (simple)',
-    source: `
-function genericFunc<T>(param: T) {
-  return param
+    name: 'TypeScript enum',
+    content: `
+enum Status {
+  PENDING = 'pending',
+  COMPLETED = 'completed'
 }`,
-    symbols: ['genericFunc'],
-    expectedSymbols: ['genericFunc'],
+    symbol: 'Status',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 5,
+    },
   },
 
-  // Reported issue tests - integrated into main suite
+  // Namespace
   {
-    name: 'Directory auto-glob (reported issue)',
-    source: 'function hello() { return "world" }', // Will create files in directory
-    symbols: ['hello'],
-    expectedSymbols: ['hello'],
-  },
-
-  {
-    name: 'Glob pattern handling (reported issue)',
-    source: 'model Tool {\n  id String\n}', // Will create .prisma files
-    symbols: ['Tool'],
-    expectedSymbols: ['Tool'],
-  },
-
-  {
-    name: 'File extension handling (reported issue)',
-    source: 'function testFunc() { return "custom" }',
-    symbols: ['testFunc'],
-    expectedSymbols: ['testFunc'],
-  },
-
-  {
-    name: 'Multiple matches across files (reported issue)',
-    source: 'function commonFunc() { return 42 }', // Will be used to create multiple files
-    symbols: ['commonFunc'],
-    expectedSymbols: ['commonFunc'],
-  },
-
-  // Directory paths - FIXED: Now working with recursive glob
-  {
-    name: 'Directory paths (src/tools) - should auto-glob recursively',
-    source: 'export interface ToolConfig { name: string }',
-    symbols: ['ToolConfig'],
-    expectedSymbols: ['ToolConfig'],
-  },
-
-  // One-liner behavior tests (Task 1: Document current regex behavior)
-  {
-    name: 'One-liner function behavior (current limitation)',
-    source: 'function oneLiner() { return 42 }',
-    symbols: ['oneLiner'],
-    expectedSymbols: ['oneLiner'], // Current regex does match one-liners (known limitation)
-  },
-
-  {
-    name: 'One-liner arrow function behavior',
-    source: 'const arrow = () => { return "test" }',
-    symbols: ['arrow'],
-    expectedSymbols: ['arrow'], // Current regex matches this too
-  },
-
-  {
-    name: 'Multi-line function should still be matched',
-    source: `function multiLine() {
-  return {
-    value: 42
+    name: 'TypeScript namespace',
+    content: `
+namespace Utils {
+  export function helper() {
+    return 'help'
   }
 }`,
-    symbols: ['multiLine'],
-    expectedSymbols: ['multiLine'], // Should still find it
+    symbol: 'Utils',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 6,
+    },
   },
 
+  // Complex class with constructor
   {
-    name: 'Class with methods should still be matched',
-    source: `class TestClass {
-  method() {
-    return true
+    name: 'Class with constructor and methods',
+    content: `
+class ComplexClass {
+  constructor(
+    public readonly id: string,
+    private data: any
+  ) {}
+
+  process() {
+    return this.data
   }
 }`,
-    symbols: ['TestClass'],
-    expectedSymbols: ['TestClass'], // Should still find it
+    symbol: 'ComplexClass',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 11,
+    },
   },
 
+  // Module declaration
   {
-    name: 'Interface should still be matched (multi-line)',
-    source: `interface TestInterface {
-  prop: string
+    name: 'Module declaration',
+    content: `
+declare module 'my-module' {
+  export function func(): void
 }`,
-    symbols: ['TestInterface'],
-    expectedSymbols: ['TestInterface'], // Should still find it
+    symbol: 'my-module',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 4,
+    },
+  },
+
+  // JSON-like structure
+  {
+    name: 'JSON configuration object',
+    content: `
+const config = {
+  database: {
+    host: 'localhost'
+  }
+}`,
+    symbol: 'config',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 6,
+    },
+  },
+
+  // GraphQL schema
+  {
+    name: 'GraphQL schema',
+    content: `
+type User {
+  id: ID!
+  name: String
+  email: String
+}`,
+    symbol: 'User',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 6,
+    },
+  },
+
+  // Word boundary test - should not match partial words
+  {
+    name: 'Word boundary test',
+    content: `
+function myFunction() { return 1 }
+function myFunctionExtended() { return 2 }
+const myFunctionVar = 'test'`,
+    symbol: 'myFunction',
+    expectedCount: 1, // Should only match exact 'myFunction', not 'myFunctionExtended'
+    expectedFirst: {
+      startLine: 2,
+      endLine: 2,
+    },
+  },
+
+  // String literals with braces (should still match, overmatch is OK)
+  {
+    name: 'String literals with braces',
+    content: `
+const template = \`
+function fake() {
+  return 'not real'
+}
+\`
+function realFunc() {
+  return 'real'
+}`,
+    symbol: 'realFunc',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 7,
+      endLine: 9,
+    },
+  },
+
+  // No matches found
+  {
+    name: 'Symbol not found',
+    content: `
+function otherFunction() {
+  return 'something'
+}`,
+    symbol: 'nonExistentSymbol',
+    expectedCount: 0,
+  },
+
+  // Nested functions (known limitation - might find both)
+  {
+    name: 'Nested functions',
+    content: `
+function outer() {
+  function inner() {
+    return 'nested'
+  }
+  return inner()
+}`,
+    symbol: 'inner',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 3,
+      endLine: 5,
+    },
+  },
+
+  // Generic functions with angle brackets
+  {
+    name: 'Generic function',
+    content: `
+function genericFunc<T>() {
+  return {} as T
+}`,
+    symbol: 'genericFunc',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 4,
+    },
+  },
+
+  // Async/await functions
+  {
+    name: 'Async function',
+    content: `
+async function asyncFunc() {
+  return await Promise.resolve('async')
+}`,
+    symbol: 'asyncFunc',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 4,
+    },
+  },
+
+  // Function expressions with names
+  {
+    name: 'Named function expression',
+    content: `
+const myVar = function namedFunc() {
+  return 'named'
+}`,
+    symbol: 'namedFunc',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 4,
+    },
+  },
+
+  // Symbol in comments (should still match - overmatch is acceptable)
+  {
+    name: 'Symbol in comments',
+    content: `
+// This is a comment about mySymbol
+function otherFunc() {
+  return 'other'
+}
+function mySymbol() {
+  return 'real'
+}`,
+    symbol: 'mySymbol',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 6,
+      endLine: 8,
+    },
+  },
+
+  // Very long symbol name
+  {
+    name: 'Long symbol name',
+    content: `
+function thisIsAVeryLongFunctionNameThatSomeoneActuallyMightUse() {
+  return 'long name'
+}`,
+    symbol: 'thisIsAVeryLongFunctionNameThatSomeoneActuallyMightUse',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 4,
+    },
+  },
+
+  // Symbol with numbers and underscores
+  {
+    name: 'Symbol with numbers and underscores',
+    content: `
+function func_123_test() {
+  return 'underscore'
+}`,
+    symbol: 'func_123_test',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 4,
+    },
+  },
+
+  // Empty braces
+  {
+    name: 'Function with empty body',
+    content: `
+function emptyFunc() {}`,
+    symbol: 'emptyFunc',
+    expectedCount: 1,
+    expectedFirst: {
+      startLine: 2,
+      endLine: 2,
+    },
   },
 ]
 
-async function test() {
-  console.log('Testing readSymbol tool with comprehensive test cases...\n')
-  let passedTests = 0
-  let totalTests = testCases.length
+console.log('🧪 Testing findBlocks function...\n')
 
-  // Create one temp file and reuse it
-  const tempFile = testUtil.createTempFile('readSymbol-test.ts', '')
+let passed = 0
+let failed = 0
+
+for (let i = 0; i < testCases.length; i++) {
+  const testCase = testCases[i]
+  const testNum = i + 1
 
   try {
-    for (let i = 0; i < testCases.length; i++) {
-      const testCase = testCases[i]
-      console.log(`🔄 Test ${i + 1}/${totalTests}: ${testCase.name}`)
+    console.log(`🔄 Test ${testNum}/${testCases.length}: ${testCase.name}`)
 
-      let testFilePath: string | string[] = tempFile
-      const tempFiles: string[] = []
+    const blocks = findBlocks(testCase.content, testCase.symbol)
 
-      try {
-        // Special handling for reported issue tests
-        if (testCase.name.includes('Directory auto-glob')) {
-          // Create a directory with files inside
-          const tempDir = `/tmp/test-dir-${Date.now()}`
-          fs.mkdirSync(tempDir)
-          // Create some files in the directory
-          fs.writeFileSync(`${tempDir}/test1.ts`, testCase.source)
-          fs.writeFileSync(`${tempDir}/test2.js`, 'function other() { return 123 }')
-          testFilePath = tempDir // Pass directory directly
-          tempFiles.push(tempDir)
-        } else if (testCase.name.includes('Glob pattern')) {
-          // Create .prisma files for glob test
-          const file1 = 'test1.prisma'
-          const file2 = 'test2.prisma'
-          fs.writeFileSync(file1, testCase.source)
-          fs.writeFileSync(file2, 'model Post {\n  title String\n}')
-          tempFiles.push(file1, file2)
-          testFilePath = '*.prisma' // Use glob pattern
-        } else if (testCase.name.includes('File extension')) {
-          // Create file with custom extension
-          const customFile = 'test.custom'
-          fs.writeFileSync(customFile, testCase.source)
-          testFilePath = customFile
-          tempFiles.push(customFile)
-        } else if (testCase.name.includes('Multiple matches across files')) {
-          // Create multiple files with the same symbol
-          const files = []
-          for (let j = 1; j <= 5; j++) {
-            const file = testUtil.createTempFile(`multi${j}.ts`, `function testFunc${j}() { return ${j} }\n${testCase.source}`)
-            files.push(file)
-            tempFiles.push(file)
-          }
-          testFilePath = files
-        } else {
-          // Regular test - override temp file content
-          fs.writeFileSync(tempFile, testCase.source.trim())
-        }
+    // Check expected count
+    if (blocks.length !== testCase.expectedCount) {
+      throw new Error(`Expected ${testCase.expectedCount} blocks, got ${blocks.length}`)
+    }
 
-        const result = await readSymbol.handler({
-          symbols: testCase.symbols,
-          file_paths: Array.isArray(testFilePath) ? testFilePath : [testFilePath],
-        })
+    // Check if we expected no results
+    if (testCase.expectedCount === 0) {
+      console.log('✅ PASSED: Correctly found no matches')
+      passed++
+      continue
+    }
 
-        if (testCase.error) {
-          console.log('❌ FAILED: Expected error but got result')
-          console.log(`   Result preview: ${result.substring(0, 100)}...`)
-          continue
-        }
+    // Check first result properties if specified
+    if (testCase.expectedFirst && blocks.length > 0) {
+      const first = blocks[0]
 
-        // Check if expected symbols were found
-        if (testCase.expectedSymbols) {
-          const foundAllExpected = testCase.expectedSymbols.every(symbol =>
-            result.includes(symbol),
-          )
-
-          if (foundAllExpected) {
-            console.log('✅ PASSED: Found all expected symbols')
-            passedTests++
-          } else {
-            console.log('❌ FAILED: Missing expected symbols')
-            console.log(`   Expected: ${testCase.expectedSymbols.join(', ')}`)
-            console.log(`   Result preview: ${result.substring(0, 150)}...`)
-          }
-        } else {
-          // No specific expectations, just that it didn't error
-          console.log('✅ PASSED: No error (as expected)')
-          passedTests++
-        }
-
-      } catch (err: any) {
-        if (testCase.error) {
-          const matchesExpectedError = err.message.includes(testCase.error)
-
-          if (matchesExpectedError) {
-            console.log('✅ PASSED: Correctly threw expected error')
-            console.log(`   Error: ${err.message}`)
-            passedTests++
-          } else {
-            console.log('❌ FAILED: Wrong error message')
-            console.log(`   Expected: ${testCase.error}`)
-            console.log(`   Actual: ${err.message}`)
-          }
-        } else {
-          console.log('❌ FAILED: Unexpected error')
-          console.log(`   Error: ${err.message}`)
-        }
-      } finally {
-        // Cleanup special test files
-        for (const path of tempFiles) {
-          try {
-            if (fs.existsSync(path)) {
-              const stat = fs.statSync(path)
-              if (stat.isDirectory()) {
-                fs.rmSync(path, { recursive: true, force: true })
-              } else {
-                fs.unlinkSync(path)
-              }
-            }
-          } catch (err) {
-            // Ignore cleanup errors
-          }
-        }
+      if (testCase.expectedFirst.startLine !== undefined && first.startLine !== testCase.expectedFirst.startLine) {
+        throw new Error(`Expected startLine ${testCase.expectedFirst.startLine}, got ${first.startLine}`)
       }
 
-      console.log() // Empty line between tests
+      if (testCase.expectedFirst.endLine !== undefined && first.endLine !== testCase.expectedFirst.endLine) {
+        throw new Error(`Expected endLine ${testCase.expectedFirst.endLine}, got ${first.endLine}`)
+      }
+
+      // Verify the block contains the symbol
+      if (!first.block.includes(testCase.symbol)) {
+        throw new Error(`Block does not contain symbol '${testCase.symbol}'`)
+      }
+
+      // Verify scoring worked (score should be > 0 for valid matches)
+      if (first.score <= 0) {
+        throw new Error(`Expected positive score, got ${first.score}`)
+      }
     }
 
-    console.log(`\n🎯 Test Summary: ${passedTests}/${totalTests} tests passed`)
+    console.log('✅ PASSED: Found expected block(s)')
+    passed++
 
-    if (passedTests === totalTests) {
-      console.log('🎉 All readSymbol tests passed!')
-    } else {
-      console.log(`💥 ${totalTests - passedTests} tests failed`)
-      console.log('\nThis helps identify which patterns the regex supports vs limitations')
-      throw new Error(`readSymbol tests failed: ${totalTests - passedTests}/${totalTests} tests failed`)
-    }
-
-  } finally {
-    // Cleanup
-    testUtil.cleanupTempFiles([tempFile])
+  } catch (error) {
+    console.log(`❌ FAILED: ${error.message}`)
+    failed++
   }
 }
 
-test()
+console.log(`\n🎯 Test Summary: ${passed} passed, ${failed} failed`)
+
+if (failed === 0) {
+  console.log('🎉 All findBlocks tests passed!')
+} else {
+  console.log(`❌ ${failed} test(s) failed`)
+  process.exit(1)
+}

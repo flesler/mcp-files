@@ -1,64 +1,171 @@
-import fs from 'fs'
+import fg from 'fast-glob'
+import fs from 'fs/promises'
 import _ from 'lodash'
-import { createRequire } from 'module'
+import pLimit from 'p-limit'
 import { z } from 'zod'
 import { defineTool } from '../tools.js'
-import util from '../util.js'
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+const MAX_CONCURRENCY = 32
+const MAX_FILE_COUNT = 100
+
+const DEFAULT_EXTENSIONS = ['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'json', 'json5', 'java', 'cs', 'cpp', 'c', 'h', 'hpp', 'cc', 'go', 'rs', 'php', 'swift', 'scss', 'css', 'less', 'graphql', 'gql', 'prisma', 'proto', 'd.ts']
+// Boost score for important symbol types (case-insensitive)
+const TYPE_BONUS = { 'class': 20, 'interface': 18, 'type': 16, 'function': 14, 'enum': 12, 'namespace': 10, 'module': 10 }
+const IGNORED_DIRECTORIES = ['node_modules', 'dist', 'build', 'out', '.git']
 
 const readSymbol = defineTool({
   id: 'read_symbol',
   schema: z.object({
-    symbols: z.array(z.string().min(1)).describe('Symbol names to find (functions, classes, types, etc.), case-sensitive'),
-    file_paths: z.array(z.string().min(1)).describe('File paths to search (supports relative paths, glob patterns, and require() package names). IMPORTANT: Be specific with paths, minimize broad patterns like "node_modules/**/*.ts" which are slow and more likely to match false positives'),
+    symbol: z.string().min(1).describe('Symbol name to find (functions, classes, types, etc.), case-sensitive'),
+    file_paths: z.array(z.string().min(1)).describe('File paths to search (supports relative paths and glob patterns). For directories, append /** is automatic. IMPORTANT: Be specific with paths, minimize broad patterns like "node_modules/**/*.ts" which are slow'),
   }),
-  description: 'Find and extract symbol(s) block by name from files, supports a lot of file formats (like TS, JS, JSON, GraphQL and most that use braces for blocks). For better performance and accuracy, prefer targeted directories rather than broad recursive searches',
+  description: 'Find and extract symbol block by name from files, supports a lot of file formats (like TS, JS, JSON, GraphQL and most that use braces for blocks). Uses streaming with concurrency control for better performance',
   isReadOnly: true,
-  fromArgs: ([symbols, ...paths]) => ({
-    symbols: symbols.split(',').map(s => s.trim()),
-    file_paths: paths,
-  }),
-  handler: (args) => {
-    const { symbols, file_paths: filePaths } = args
-    const expandedFiles = expandGlobPatterns(filePaths)
-    const showSymbolName = symbols.length > 1
+  fromArgs: ([symbol, ...paths]) => ({ symbol, file_paths: paths }),
+  handler: async (args) => {
+    const { symbol, file_paths: filePaths } = args
+    const maxResults = Math.max(1, 10)
+    const patterns = filePaths.map(mapPattern)
     const results: string[] = []
-    const maxResults = Math.max(symbols.length * 3, 10) // Allow more matches but still reasonable
+    let filesProcessed = 0
+    try {
+      for await (const match of scanForSymbol(symbol, patterns)) {
+        results.push(match)
+        filesProcessed++
 
-    fileLoop: for (const filePath of expandedFiles) {
-      try {
-        const fullPath = util.resolve(filePath)
-        const content = util.readFile(fullPath)
-        for (const symbol of symbols) {
-          const blocks = findBlocks(content, symbol)
-          if (!blocks.length) {
-            continue
-          }
-          results.push(...blocks.map(block => formatResult(block, symbol, filePath, showSymbolName)))
-
-          // Early return if we have enough results across files
-          if (results.length >= maxResults) {
-            break fileLoop
-          }
+        // Stop if we have enough results or processed too many files
+        if (results.length >= maxResults || filesProcessed >= MAX_FILE_COUNT) {
+          break
         }
-      } catch {
       }
+    } catch (err) {
+      if (!results.length) {
+        throw err
+      }
+      // If we have some results, continue with what we have
     }
+
     if (!results.length) {
       throw new Error('No symbols found in any files')
     }
+
     return results.join('\n\n')
   },
 })
 
-export default readSymbol
+export function mapPattern(pattern: string) {
+  const exts = `.{${DEFAULT_EXTENSIONS.join(',')}}`
 
-interface Block {
+  // Check if pattern has a recognized file extension at the end
+  const hasKnownExtension = DEFAULT_EXTENSIONS.some(ext => pattern.endsWith(`.${ext}`))
+  if (hasKnownExtension) {
+    return pattern
+  }
+
+  // Handle special cases
+  if (pattern === '.' || pattern === './') {
+    return `./**/*${exts}`
+  }
+
+  // If pattern ends with / it's definitely a directory
+  if (pattern.endsWith('/')) {
+    const basePath = pattern.replace(/\/$/, '')
+    return `${basePath}/**/*${exts}`
+  }
+
+  // Check if it looks like a directory (no glob chars and no file extension)
+  const hasGlobChars = pattern.includes('*') || pattern.includes('?') || pattern.includes('[')
+  const lastSegment = pattern.split('/').pop() || ''
+  const hasFileExtension = /\.\w+$/.test(lastSegment) && DEFAULT_EXTENSIONS.includes(lastSegment.split('.').pop()!)
+
+  if (!hasGlobChars && !hasFileExtension) {
+    // Treat as directory
+    return `${pattern}/**/*${exts}`
+  }
+
+  // Handle common glob patterns
+  if (pattern === '*' || pattern === '*.*') {
+    return `*${exts}`
+  }
+
+  // If no extension but has glob patterns, add extensions
+  return `${pattern}${exts}`
+}
+
+export function generateIgnorePatterns(patterns: string[]): string[] {
+  const dirsToIgnore = IGNORED_DIRECTORIES.filter(dir => !patterns.some(pattern => pattern.includes(dir)))
+  if (!dirsToIgnore.length) {
+    return []
+  }
+  // Generate single pattern with braces: !{node_modules|dist|build}/**
+  return [`!{${dirsToIgnore.join('|')}}/**`]
+}
+
+async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerator<string> {
+  const limit = pLimit(MAX_CONCURRENCY)
+  let shouldStop = false
+
+  const ignorePatterns = generateIgnorePatterns(patterns)
+  const allPatterns = [...patterns, ...ignorePatterns]
+  const entries = fg.stream(allPatterns, {
+    onlyFiles: true,
+    absolute: true,
+    stats: true,
+    suppressErrors: true, // avoid crashes from file access errors
+    deep: 4,
+  }) as AsyncIterable<fg.Entry>
+
+  const pendingTasks = new Set<Promise<string[]>>()
+
+  try {
+    for await (const entry of entries) {
+      if (shouldStop) break
+
+      // Skip files that are too large
+      if (entry.stats && entry.stats.size > MAX_FILE_SIZE) continue
+
+      const task = limit(async () => {
+        if (shouldStop) return []
+
+        try {
+          const content = await fs.readFile(entry.path, 'utf8')
+          if (shouldStop) return []
+          const results: string[] = []
+          const blocks = findBlocks(content, symbol)
+          for (const block of blocks) {
+            if (shouldStop) return []
+            results.push(formatResult(block, symbol, entry.path))
+          }
+          return results
+        } catch {
+          // silently skip unreadable files
+          return []
+        }
+      })
+
+      pendingTasks.add(task)
+      const taskResults = await task
+      pendingTasks.delete(task)
+
+      for (const result of taskResults) {
+        yield result
+      }
+    }
+  } finally {
+    shouldStop = true // hard stop any latecomers
+    await Promise.allSettled([...pendingTasks]) // drain & clean
+  }
+}
+
+export interface Block {
   block: string
   startLine: number
   endLine: number
+  score: number
 }
 
-function findBlocks(content: string, symbol: string): Block[] {
+export function findBlocks(content: string, symbol: string): Block[] {
   const regex = new RegExp(`^([ \t]*).*\\b${symbol}\\b.*(\\n\\1)?{(?:\\n\\1\\s+.*)*[^}]*}`, 'mg')
   const matches = content.matchAll(regex) || []
   const results: Block[] = []
@@ -67,77 +174,42 @@ function findBlocks(content: string, symbol: string): Block[] {
     const startLine = lines.length
     const matchLines = match[0].split('\n')
     const endLine = startLine + matchLines.length - 1
-    results.push({ block: match[0], startLine, endLine })
+    const score = scoreSymbol(match[0])
+    results.push({ block: match[0], startLine, endLine, score })
   }
-  return results
+  // Sort by score (higher is better) and return
+  return results.sort((a, b) => b.score - a.score)
 }
 
-function formatResult(block: Block, symbol: string, filePath: string, showSymbolName: boolean): string {
-  // Match the format used by AIs in Cursor
-  let header = `${block.startLine}:${block.endLine}:${filePath}`
-  if (showSymbolName) {
-    header = `${symbol} @ ${header}`
+function scoreSymbol(block: string): number {
+  let score = 0
+
+  // Prefer multi-line symbols over single-line
+  const lineCount = block.split('\n').length
+  if (lineCount > 2) {
+    score += lineCount * 2 // Bonus for each additional line
+  } else {
+    score -= 10 // Penalty for single-line matches
   }
+  // Boost score for important symbol types (case-insensitive)
+  const typeMatches = block.match(typeBonusRegex()) || []
+  for (const match of typeMatches) {
+    const key = match.toLowerCase() as keyof typeof TYPE_BONUS
+    const bonus = TYPE_BONUS[key] || 2
+    score += bonus
+  }
+  // Small bonus for longer, more detailed symbols
+  score += Math.min(block.length / 50, 10)
+  return Math.round(score)
+}
+
+function formatResult(block: Block, symbol: string, filePath: string): string {
+  // Match the format used by AIs in Cursor
+  const header = `${symbol} @ ${block.startLine}:${block.endLine}:${filePath}`
   return `=== ${header} ===\n${block.block}`
 }
 
-function expandGlobPatterns(filePaths: string[]): string[] {
-  return _(filePaths).flatMap(listFiles).uniq()
-    .filter(file => !/\.map$/i.test(file))
-    .filter(file => {
-      // Filter out directories - only include files
-      try {
-        const stat = fs.statSync(util.resolve(file))
-        return stat.isFile()
-      } catch {
-        return true // Include if we can't stat (might be package, etc.)
-      }
-    })
-    .sortBy(scoreFile).value()
-}
+const typeBonusRegex = _.memoize(() => new RegExp(`\\b(${Object.keys(TYPE_BONUS).join('|')})\\b`, 'gi'))
 
-function listFiles(file: string): string[] {
-  // Check for glob patterns first (before trying to stat)
-  if (file.includes('*') || file.includes('?') || file.includes('[')) {
-    try {
-      return util.glob(file)
-    } catch {
-      return []
-    }
-  }
-
-  try {
-    const path = util.resolve(file)
-    const stat = fs.statSync(path)
-    if (stat.isFile()) {
-      return [path]
-    }
-    if (stat.isDirectory()) {
-      return util.glob(`${path.replace(/\/$/, '')}/**/*`)
-    }
-  } catch {}
-  try {
-    // Try as package
-    return [getRequire().resolve(file)]
-  } catch {
-    return [file]
-  }
-}
-
-// Prioritize index files, TS, etc. Those we know can have symbols
-const PRIORITY = ['index.', '.d.ts', '.ts', '.js', '.json', '.graphql', '.prisma'].reverse()
-
-function scoreFile(file: string): number {
-  let score = 0
-  for (let i = 0; i < PRIORITY.length; i++) {
-    if (file.includes(PRIORITY[i])) {
-      score -= i + 1
-    }
-  }
-  return -score
-}
-
-const getRequire = _.memoize(() => {
-  return createRequire(util.resolve('package.json'))
-})
+export default readSymbol
 

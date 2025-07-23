@@ -109,7 +109,7 @@ Add to your MCP client config:
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `read_symbol` | Find and extract code blocks by symbol name from files | `symbols[]`, `file_paths[]` |
+| `read_symbol` | Find and extract code blocks by symbol name from files | `symbol`, `file_paths[]` |
 | `import_symbol` | Import and inspect JavaScript/TypeScript modules and their properties | `module_path`, `property?` |
 | `search_replace` | Search and replace text in files with flexible whitespace matching | `file_path`, `old_string`, `new_string` |
 | `insert_text` | Insert text at a specific line number in a file (1-based) | `file_path`, `line_number`, `text` |
@@ -147,7 +147,7 @@ DEBUG=true mcp-files
 All tools can be used directly from the command line:
 
 ```bash
-# Find symbols in code
+# Find symbol in code
 mcp-files read_symbol "MyInterface" src/types.ts
 
 # Inspect imports
