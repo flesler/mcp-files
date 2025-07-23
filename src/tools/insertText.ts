@@ -2,14 +2,14 @@ import { z } from 'zod'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
 
+const CONTEXT_LINES = 2
+
 const schema = z.object({
   file_path: z.string().min(1).describe('Path to the file'),
   from_line: z.number().int().min(1).describe('Starting line number (1-based)'),
   text: z.string().describe('Text to insert'),
   to_line: z.number().int().min(1).optional().describe('Replace up to this line number (1-based, inclusive). If omitted only inserts'),
 })
-
-type UpdateTextArgs = Omit<z.infer<typeof schema>, 'file_path'>
 
 const insertText = defineTool({
   id: 'insert_text',
@@ -24,24 +24,17 @@ const insertText = defineTool({
     file_path: filePath, from_line: parseInt(fromLine, 10), text, to_line: toLine ? parseInt(toLine, 10) : undefined,
   }),
   handler: (args) => {
-    const { file_path: filePath, ...updateArgs } = args
-    const fullPath = util.resolve(filePath)
+    const fullPath = util.resolve(args.file_path)
     const content = util.readFile(fullPath)
-    const newContent = updateText(content, updateArgs)
+    const newContent = updateText(content, args.from_line, args.text, args.to_line)
     util.writeFile(fullPath, newContent)
-    const newLines = updateArgs.text.split('\n')
-    if (updateArgs.to_line) {
-      return `Successfully replaced lines ${updateArgs.from_line}-${updateArgs.to_line} with ${newLines.length} line(s) in ${filePath}`
-    } else {
-      return `Successfully inserted ${newLines.length} line(s) at line ${updateArgs.from_line} in ${filePath}`
-    }
+    return getContext(newContent, args.from_line, args.text, fullPath)
   },
 })
 
 export default insertText
 
-export function updateText(content: string, args: UpdateTextArgs): string {
-  const { from_line: fromLine, text, to_line: toLine } = args
+export function updateText(content: string, fromLine: number, text: string, toLine?: number): string {
   const endLine = toLine ?? fromLine
   if (endLine < fromLine) {
     throw new Error(`Invalid line range: to_line (${endLine}) cannot be less than from_line (${fromLine})`)
@@ -57,4 +50,14 @@ export function updateText(content: string, args: UpdateTextArgs): string {
   const newLines = text.split('\n')
   lines.splice(fromLine - 1, linesToRemove, ...newLines)
   return lines.join('\n')
+}
+
+function getContext(content: string, fromLine: number, text: string, path: string): string {
+  const lines = content.split('\n')
+  const newLines = text.split('\n')
+  // Show from_line - 2 to from_line + newLines.length + 2
+  const startLine = Math.max(0, fromLine - 1 - CONTEXT_LINES)
+  const endLine = Math.min(lines.length, fromLine - 1 + newLines.length + CONTEXT_LINES)
+  const header = `=== ${startLine + 1}:${endLine + 1}:${path} ===`
+  return `${header}\n${lines.slice(startLine, endLine).join('\n')}`
 }

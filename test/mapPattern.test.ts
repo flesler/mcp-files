@@ -6,6 +6,9 @@ interface TestCase {
   description: string
 }
 
+// Constants for easier maintenance
+const DEFAULT_EXTENSIONS = '{ts,tsx,js,jsx,mjs,cjs,cts,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}'
+
 const testCases: TestCase[] = [
   // Files with extensions - should pass through unchanged
   {
@@ -15,8 +18,8 @@ const testCases: TestCase[] = [
   },
   {
     input: 'package.json',
-    expected: 'package.json',
-    description: 'JSON file with extension',
+    expected: `package.json/**/*.${DEFAULT_EXTENSIONS}`,
+    description: 'JSON file treated as directory (JSON support removed)',
   },
   {
     input: 'styles.css',
@@ -25,7 +28,7 @@ const testCases: TestCase[] = [
   },
   {
     input: 'README.md',
-    expected: 'README.md/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `README.md/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Markdown file with extension (treated as directory since .md not in DEFAULT_EXTENSIONS)',
   },
   {
@@ -42,160 +45,180 @@ const testCases: TestCase[] = [
   // Current directory patterns
   {
     input: '.',
-    expected: './**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `./**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Current directory (dot)',
   },
   {
     input: './',
-    expected: './**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `./**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Current directory with slash',
   },
 
   // Directory paths (no trailing slash)
   {
     input: 'src',
-    expected: 'src/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `src/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Simple directory name',
   },
   {
     input: 'src/components',
-    expected: 'src/components/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `src/components/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Nested directory path',
   },
   {
     input: 'test/unit/helpers',
-    expected: 'test/unit/helpers/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `test/unit/helpers/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Deep nested directory',
   },
   {
     input: 'backend',
-    expected: 'backend/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `backend/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Backend directory',
   },
 
   // Directory paths (with trailing slash)
   {
     input: 'src/',
-    expected: 'src/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `src/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Directory with trailing slash',
   },
   {
     input: 'api/routes/',
-    expected: 'api/routes/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `api/routes/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Nested directory with trailing slash',
   },
   {
     input: 'frontend/components/',
-    expected: 'frontend/components/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `frontend/components/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Deep directory with trailing slash',
   },
 
   // Common glob patterns
   {
     input: '*',
-    expected: '*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `*.${DEFAULT_EXTENSIONS}`,
     description: 'Wildcard for all files in current directory',
   },
   {
     input: '*.*',
-    expected: '*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `*.${DEFAULT_EXTENSIONS}`,
     description: 'Wildcard for all files with extensions',
   },
 
   // Glob patterns without extensions - should add extensions
   {
     input: 'src/*',
-    expected: 'src/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `src/*.${DEFAULT_EXTENSIONS}`,
     description: 'Wildcard in directory',
   },
   {
     input: '**/*',
-    expected: '**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Recursive wildcard',
   },
   {
     input: 'src/**/*',
-    expected: 'src/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `src/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Recursive wildcard in directory',
   },
   {
     input: 'test/*/fixtures',
-    expected: 'test/*/fixtures.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `test/*/fixtures.${DEFAULT_EXTENSIONS}`,
     description: 'Wildcard in middle of path',
   },
 
   // Glob patterns with brackets
   {
     input: 'src/[abc]*',
-    expected: 'src/[abc]*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `src/[abc]*.${DEFAULT_EXTENSIONS}`,
     description: 'Character class glob pattern',
   },
   {
     input: 'test/[0-9]*',
-    expected: 'test/[0-9]*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `test/[0-9]*.${DEFAULT_EXTENSIONS}`,
     description: 'Numeric range glob pattern',
   },
 
   // Glob patterns with question marks
   {
     input: 'src/?est',
-    expected: 'src/?est.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `src/?est.${DEFAULT_EXTENSIONS}`,
     description: 'Single character wildcard',
   },
   {
     input: 'lib/util?',
-    expected: 'lib/util?.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `lib/util?.${DEFAULT_EXTENSIONS}`,
     description: 'Single character wildcard at end',
   },
 
   // Names without extensions that look like files
   {
     input: 'README',
-    expected: 'README/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `README/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'README without extension (treated as directory)',
   },
   {
     input: 'Dockerfile',
-    expected: 'Dockerfile/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `Dockerfile/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Dockerfile without extension (treated as directory)',
   },
   {
     input: 'Makefile',
-    expected: 'Makefile/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `Makefile/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Makefile without extension (treated as directory)',
   },
 
   // Complex nested patterns
   {
     input: 'apps/frontend/src',
-    expected: 'apps/frontend/src/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `apps/frontend/src/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Deep nested application directory',
   },
   {
     input: 'packages/*/src',
-    expected: 'packages/*/src.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `packages/*/src.${DEFAULT_EXTENSIONS}`,
     description: 'Monorepo package pattern',
   },
   {
     input: 'libs/shared',
-    expected: 'libs/shared/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `libs/shared/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Shared library directory',
   },
 
   // Edge cases with mixed dots and paths
   {
     input: 'src.backup',
-    expected: 'src.backup/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `src.backup/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Directory name with dot (no extension)',
   },
   {
     input: 'node_modules',
-    expected: 'node_modules/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `node_modules/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'node_modules directory',
   },
   {
+    input: 'node_modules/lodash',
+    expected: `node_modules/{@types/,}lodash/**/*.${DEFAULT_EXTENSIONS}`,
+    description: 'node_modules package should include @types transformation',
+  },
+  {
+    input: 'node_modules/react/lib',
+    expected: `node_modules/{@types/,}react/lib/**/*.${DEFAULT_EXTENSIONS}`,
+    description: 'node_modules package with subpath should include @types transformation',
+  },
+  {
+    input: 'node_modules/@types/node',
+    expected: `node_modules/@types/node/**/*.${DEFAULT_EXTENSIONS}`,
+    description: 'node_modules @types package should not be double-transformed',
+  },
+  {
+    input: 'src/node_modules/utils',
+    expected: `src/node_modules/{@types/,}utils/**/*.${DEFAULT_EXTENSIONS}`,
+    description: 'nested node_modules should also get @types transformation',
+  },
+  {
     input: '.git',
-    expected: '.git/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `.git/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Hidden directory',
   },
 
@@ -207,8 +230,8 @@ const testCases: TestCase[] = [
   },
   {
     input: '**/*.json',
-    expected: '**/*.json',
-    description: 'Already has JSON extension pattern',
+    expected: `**/*.json.${DEFAULT_EXTENSIONS}`,
+    description: 'JSON pattern gets extensions appended (JSON support removed)',
   },
   {
     input: 'test/**/*.spec.js',
@@ -219,48 +242,48 @@ const testCases: TestCase[] = [
   // Patterns that would confuse the logic
   {
     input: 'src.old/backup',
-    expected: 'src.old/backup/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `src.old/backup/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Directory path with dots in directory name',
   },
   {
     input: 'weird.folder.name',
-    expected: 'weird.folder.name/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `weird.folder.name/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Directory with multiple dots but no extension',
   },
   {
     input: 'folder/file.with.dots',
-    expected: 'folder/file.with.dots/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `folder/file.with.dots/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Path with dots but no recognized extension',
   },
 
   // Empty and minimal cases
   {
     input: '/',
-    expected: '/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Root directory',
   },
 
   // Ignored directories (should still work normally until we add ignore logic)
   {
     input: 'node_modules',
-    expected: 'node_modules/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `node_modules/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'node_modules directory',
   },
   {
     input: 'dist/assets',
-    expected: 'dist/assets/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `dist/assets/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'dist subdirectory',
   },
   {
     input: 'build',
-    expected: 'build/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `build/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'build directory',
   },
 
   // Windows-style paths
   {
     input: 'src\\components',
-    expected: 'src\\components/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `src\\components/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Windows-style directory path',
   },
 
@@ -277,12 +300,12 @@ const testCases: TestCase[] = [
   },
   {
     input: 'a',
-    expected: 'a/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `a/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Single letter directory',
   },
   {
     input: 'A',
-    expected: 'A/**/*.{ts,tsx,js,jsx,mjs,cjs,json,json5,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}',
+    expected: `A/**/*.${DEFAULT_EXTENSIONS}`,
     description: 'Single uppercase letter directory',
   },
 ]

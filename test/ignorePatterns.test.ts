@@ -6,60 +6,61 @@ interface TestCase {
   description: string
 }
 
-const NEGATIVE_FILES = '!**/{package-lock.json,*.test.*,*.spec.*,_*}'
+const NEGATIVE_FILES = '!**/{*.test.*,*.spec.*,_*,*.min.*}'
+const DEFAULT_IGNORED_DIRS = '{node_modules,dist,build,out,.git,**/test,**/tests,**/examples,**/examples/**,**/bin/**}'
 
 const testCases: TestCase[] = [
   {
     input: ['src/**/*.ts'],
-    expected: [NEGATIVE_FILES, '!{node_modules,dist,build,out,.git,**/test,**/tests,**/examples,**/examples/**}/**'],
+    expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS}/**`],
     description: 'Should ignore all default directories when none specified',
   },
 
   {
     input: ['src/**/*.ts', 'node_modules/@types/**/*.d.ts'],
-    expected: [NEGATIVE_FILES, '!{dist,build,out,.git,**/test,**/tests,**/examples,**/examples/**}/**'],
+    expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('node_modules,', '')}/**`],
     description: 'Should NOT ignore node_modules when explicitly included',
   },
 
   {
     input: ['dist/assets/**/*.js'],
-    expected: [NEGATIVE_FILES, '!{node_modules,build,out,.git,**/test,**/tests,**/examples,**/examples/**}/**'],
+    expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('dist,', '')}/**`],
     description: 'Should NOT ignore dist when explicitly included',
   },
 
   {
     input: ['node_modules', 'dist', 'build'],
-    expected: [NEGATIVE_FILES, '!{out,.git,**/test,**/tests,**/examples,**/examples/**}/**'],
+    expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('node_modules,dist,build,', '')}/**`],
     description: 'Should only ignore directories not explicitly requested',
   },
 
   {
     input: ['node_modules', 'dist', 'build', 'out', '.git'],
-    expected: [NEGATIVE_FILES, '!{**/test,**/tests,**/examples,**/examples/**}/**'],
+    expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('node_modules,dist,build,out,.git,', '')}/**`],
     description: 'Should ignore files and remaining directories when most directories explicitly requested',
   },
 
   {
     input: ['node_modules', 'dist', 'build', 'out', '.git', '**/test', '**/tests'],
-    expected: [NEGATIVE_FILES, '!{**/examples,**/examples/**}/**'],
+    expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('node_modules,dist,build,out,.git,**/test,**/tests,', '')}/**`],
     description: 'Should ignore files and remaining directories when most directories explicitly requested',
   },
 
   {
     input: ['src/**/*.ts', 'test/**/*.ts', 'docs/**/*.md'],
-    expected: [NEGATIVE_FILES, '!{node_modules,dist,build,out,.git,**/test,**/tests,**/examples,**/examples/**}/**'],
+    expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS}/**`],
     description: 'Should ignore all when no ignored dirs mentioned except test is included',
   },
 
   {
     input: ['.'],
-    expected: [NEGATIVE_FILES, '!{node_modules,dist,build,out,.git,**/test,**/tests,**/examples,**/examples/**}/**'],
+    expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS}/**`],
     description: 'Should ignore all default directories when using current directory pattern "."',
   },
 
   {
     input: ['src/**/*.ts', '**/test/**/*.ts'],
-    expected: [NEGATIVE_FILES, '!{node_modules,dist,build,out,.git,**/tests,**/examples,**/examples/**}/**'],
+    expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('**/test,', '')}/**`],
     description: 'Should NOT ignore **/test when explicitly included with glob pattern',
   },
 ]

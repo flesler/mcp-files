@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import { z } from 'zod'
+import env from '../env.js'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
 
@@ -11,6 +12,7 @@ const importSymbol = defineTool({
   }),
   description: 'Import and inspect JavaScript/TypeScript modules ala require(), or import()',
   isReadOnly: true,
+  isEnabled: env.DEBUG,
   fromArgs: ([module_path = '', property]) => ({
     module_path,
     property: property || undefined,

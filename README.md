@@ -80,7 +80,7 @@ Add this to `~/.cursor/mcp.json` for Cursor, `~/.config/claude_desktop_config.js
 |------|-------------|------------|
 | `read_symbol` | Find and extract code blocks by symbol name from files | `symbol`, `file_paths[]?`, `limit?` |
 | `import_symbol` | Import and inspect JavaScript/TypeScript modules and their properties | `module_path`, `property?` |
-| `search_replace` | Search and replace with intelligent whitespace handling and automation-friendly multiple match resolution | `file_path`, `old_string`, `new_string` |
+| `search_replace` | Search and replace with intelligent whitespace handling and automation-friendly multiple match resolution | `file_path`, `old_string`, `new_string`, `allow_multiple_matches?` |
 | `insert_text` | Insert/replace text at precise line ranges. Perfect for direct line operations from code citations (12:15:file.ts) and surgical edits in large files | `file_path`, `from_line`, `text`, `to_line` |
 | `os_notification` | Send OS notifications using native notification systems | `message`, `title?` |
 

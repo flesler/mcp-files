@@ -76,6 +76,106 @@ const testCases: TestCase[] = [
     description: 'TypeScript enum',
   },
 
+  // 🌟 WILDCARD TESTS
+  {
+    name: 'Wildcard function match',
+    content: `function myFunction() {
+  return 'hello'
+}`,
+    symbol: 'my*',
+    shouldMatch: true,
+    description: 'Wildcard should match function starting with my',
+  },
+  {
+    name: 'Wildcard class match',
+    content: `class UserService {
+  constructor() {}
+}`,
+    symbol: 'User*',
+    shouldMatch: true,
+    description: 'Wildcard should match class starting with User',
+  },
+  {
+    name: 'Wildcard interface match',
+    content: `interface ApiResponse {
+  data: any
+}`,
+    symbol: 'Api*',
+    shouldMatch: true,
+    description: 'Wildcard should match interface starting with Api',
+  },
+  {
+    name: 'Wildcard type match',
+    content: `type ConfigObject = {
+  setting: string
+}`,
+    symbol: 'Config*',
+    shouldMatch: true,
+    description: 'Wildcard should match type starting with Config',
+  },
+  {
+    name: 'Multiple wildcard match',
+    content: `function handleUserRequest() {
+  return 'handled'
+}
+
+function handleAdminRequest() {
+  return 'admin handled'  
+}`,
+    symbol: 'handle*',
+    shouldMatch: true,
+    description: 'Wildcard should match multiple functions with same prefix',
+  },
+  {
+    name: 'Prefix wildcard match',
+    content: `function getData() {
+  return data
+}`,
+    symbol: '*Data',
+    shouldMatch: true,
+    description: 'Wildcard should match function ending with Data',
+  },
+  {
+    name: 'Middle wildcard match',
+    content: `function getUserData() {
+  return userData
+}`,
+    symbol: 'get*Data',
+    shouldMatch: true,
+    description: 'Wildcard should match function with pattern in middle',
+  },
+  {
+    name: 'Multiple wildcards match',
+    content: `function myGetUserData() {
+  return userData
+}`,
+    symbol: '*Get*Data',
+    shouldMatch: true,
+    description: 'Multiple wildcards should match complex patterns',
+  },
+  {
+    name: 'Single wildcard match all',
+    content: `function anyFunction() {
+  return 'any'
+}`,
+    symbol: '*',
+    shouldMatch: true,
+    description: 'Single wildcard should match any symbol',
+  },
+  {
+    name: 'Wildcard no match',
+    content: `function getData() {
+  return data
+}
+
+function processInfo() {
+  return info
+}`,
+    symbol: 'handle*',
+    shouldMatch: false,
+    description: 'Wildcard should not match when pattern not found',
+  },
+
   // ❌ NEGATIVE CASES - Should NOT match
   {
     name: 'Property access',
@@ -181,7 +281,7 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Symbols used as object property keys should be filtered out by negative lookahead (colon after)',
+    description: 'Object property keys should not match (no brace block follows)',
   },
 
   {
@@ -274,6 +374,31 @@ if (condition) {
     shouldMatch: true,
     description: 'Nested object methods should match',
   },
+  {
+    name: 'Function with ternary operator',
+    content: `function myFunc() {
+  return condition ? 'yes' : 'no'
+}`,
+    symbol: 'myFunc',
+    shouldMatch: true,
+    description: 'Functions with ternary operators should match (colon in body is OK)',
+  },
+  {
+    name: 'Function with type annotation',
+    content: `function myFunc(): string {
+  return 'typed function'
+}`,
+    symbol: 'myFunc',
+    shouldMatch: true,
+    description: 'TypeScript functions with return type annotations should match',
+  },
+  {
+    name: 'Windows CRLF line endings',
+    content: '// Comment with CRLF\r\nfunction myFunc() {\r\n  var x = 1;\r\n  return x;\r\n}',
+    symbol: 'myFunc',
+    shouldMatch: true,
+    description: 'Functions with Windows CRLF line endings should match (test for \\r\\n handling)',
+  },
 ]
 
 function runTests() {
@@ -284,7 +409,7 @@ function runTests() {
 
   for (const testCase of testCases) {
     try {
-      const matches = matchSymbol(testCase.content, testCase.symbol)
+      const matches = [...matchSymbol(testCase.content, testCase.symbol)].map(m => m[0])
       const hasMatch = matches.length > 0
 
       if (hasMatch === testCase.shouldMatch) {

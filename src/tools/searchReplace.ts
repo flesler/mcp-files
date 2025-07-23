@@ -4,6 +4,8 @@ import env from '../env.js'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
 
+const CONTEXT_LINES = 2
+
 const ID = 'search_replace'
 const searchReplace = defineTool({
   id: ID,
@@ -12,8 +14,9 @@ const searchReplace = defineTool({
     file_path: z.string().min(1).describe('Path to the file (supports relative and absolute paths)'),
     old_string: z.string().min(1).describe('Exact text to replace (must be unique in file)'),
     new_string: z.string().describe('Replacement text'),
+    allow_multiple_matches: z.boolean().optional().describe('Allow multiple matches to be replaced. If false, throws error when multiple matches found (default: true)'),
   }),
-  description: 'Search and replace with intelligent whitespace handling and automation-friendly multiple match resolution. Tries exact match first, falls back to flexible whitespace matching.',
+  description: 'Search and replace with intelligent whitespace handling and automation-friendly multiple match resolution. Tries exact match first, falls back to flexible whitespace matching only when no matches found.',
   isReadOnly: false,
   fromArgs: ([filePath = '', oldString = '', newString = '']) => ({
     file_path: filePath,
@@ -21,7 +24,7 @@ const searchReplace = defineTool({
     new_string: newString,
   }),
   handler: (args) => {
-    const { file_path: filePath, old_string: oldString, new_string: newString } = args
+    const { file_path: filePath, old_string: oldString, new_string: newString, allow_multiple_matches: allowMultiple = true } = args
     const fullPath = util.resolve(filePath)
     const content = util.readFile(fullPath)
 
@@ -29,102 +32,41 @@ const searchReplace = defineTool({
     if (oldString.includes(newString)) {
       throw new Error(`Redundant replacement: old_string already contains new_string. Old: "${oldString}", New: "${newString}"`)
     }
-
     // Core strategies: exact match + whitespace flexibility (matching Cursor's capability)
-    const strategies = [
-      {
-        name: 'exact',
-        pattern: oldString,
-        isRegex: false,
-      },
-      {
-        name: 'whitespace_flexible',
-        pattern: createCursorLikePattern(oldString),
-        isRegex: true,
-      },
-    ]
-
-    let foundMatch = false
-    let newContent = content
-    let usedStrategy = ''
-    let matchDetails = ''
-
-    for (const strategy of strategies) {
-      try {
-        if (strategy.isRegex) {
-          const regex = new RegExp(strategy.pattern, 'gm')
-          const matches = content.match(regex)
-
-          if (matches && matches.length === 1) {
-            // Exactly one match found
-            newContent = content.replace(regex, newString)
-            foundMatch = true
-            usedStrategy = strategy.name
-            matchDetails = `Found 1 match using ${strategy.name} strategy`
-            break
-          } else if (matches && matches.length > 1) {
-            // Multiple matches - this is ambiguous, try next strategy
-            continue
-          }
-        } else {
-          // Simple string matching
-          if (content.includes(strategy.pattern)) {
-            const occurrences = (content.match(new RegExp(_.escapeRegExp(strategy.pattern), 'g')) || []).length
-
-            if (occurrences === 1) {
-              // Single match - proceed
-              newContent = content.replace(strategy.pattern, newString)
-              foundMatch = true
-              usedStrategy = strategy.name
-              matchDetails = `Found 1 match using ${strategy.name} strategy`
-              break
-            } else if (occurrences > 1) {
-              // Multiple matches - this is our core value: proceed with first match
-              newContent = content.replace(strategy.pattern, newString)
-              foundMatch = true
-              usedStrategy = strategy.name
-              matchDetails = `Found ${occurrences} matches, replaced first occurrence using ${strategy.name} strategy`
-              break
-            }
-          }
-        }
-      } catch (error) {
-        // Strategy failed, try next one
+    const patterns = [oldString, createCursorLikePattern(oldString)]
+    // Try each strategy until one works
+    for (const pattern of patterns) {
+      const parts = content.split(pattern)
+      const matches = parts.length - 1
+      if (!matches) {
         continue
       }
+      if (matches > 1 && !allowMultiple) {
+        throw new Error(`Multiple matches found (${matches}) for "${oldString}" in ${filePath}. Set allow_multiple_matches=true to allow replacing first occurrence, or make your search string more specific.`)
+      }
+      const newContent = parts.join(newString)
+      util.writeFile(fullPath, newContent)
+      return formatDiff(content, newContent)
     }
-
-    if (!foundMatch) {
-      const searchableContent = content.length > 500 ? content.substring(0, 500) + '...' : content
-      throw new Error(`Could not find the specified text in ${filePath}. Tried all strategies:\n` +
-        `- Original text: "${oldString}"\n` +
-        `- File content preview: "${searchableContent.replace(/\n/g, '\\n')}"`)
-    }
-
-    // Verify the replacement was successful
-    if (!newContent.includes(newString) && newString.length > 0) {
-      throw new Error(`REPLACEMENT FAILED: "${newString}" not found in final content. File NOT modified.`)
-    }
-
-    util.writeFile(fullPath, newContent)
-    return formatDiff(content, newContent, usedStrategy, matchDetails)
+    throw new Error(`Could not find the specified text in ${filePath}`)
   },
 })
 
 // Helper function for Cursor-like whitespace handling
-function createCursorLikePattern(text: string): string {
+function createCursorLikePattern(text: string) {
   // Match Cursor's whitespace handling: flexible with spaces/tabs, preserve structure
-  return _.escapeRegExp(text)
+  return new RegExp(_.escapeRegExp(text)
     .replace(/\s+/g, '\\s+')           // Any whitespace sequence becomes flexible
     .replace(/^\s*/, '\\s*')           // Optional leading whitespace
     .replace(/\s*$/, '\\s*')           // Optional trailing whitespace
+  , 'gm')
 }
 
 
 
 export default searchReplace
 
-function formatDiff(original: string, updated: string, strategy?: string, details?: string): string {
+function formatDiff(original: string, updated: string): string {
   const originalLines = original.split('\n')
   const newLines = updated.split('\n')
 
@@ -144,12 +86,9 @@ function formatDiff(original: string, updated: string, strategy?: string, detail
   }
 
   // Generate diff with context
-  const contextLines = 2
-  const displayStart = Math.max(0, startLine - contextLines)
-  const displayEnd = Math.min(originalLines.length - 1, endLine + contextLines)
-
+  const displayStart = Math.max(0, startLine - CONTEXT_LINES)
+  const displayEnd = Math.min(originalLines.length - 1, endLine + CONTEXT_LINES)
   const diffLines: string[] = []
-
   for (let i = displayStart; i <= displayEnd; i++) {
     const oldLine = originalLines[i] || ''
     const newLine = newLines[i] || ''
@@ -167,12 +106,7 @@ function formatDiff(original: string, updated: string, strategy?: string, detail
     }
   }
 
-  let result = 'The following diff was applied to the file:'
-  if (strategy && details) {
-    result += `\n\n🎯 ${details}`
-  }
+  return `The following diff was applied to the file:
 
-  result += `\n\n\`\`\`\n${diffLines.join('\n')}\n\`\`\``
-
-  return result
+\`\`\`\n${diffLines.join('\n')}\n\`\`\``
 }
