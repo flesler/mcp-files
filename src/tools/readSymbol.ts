@@ -3,39 +3,41 @@ import fs from 'fs/promises'
 import _ from 'lodash'
 import pLimit from 'p-limit'
 import { z } from 'zod'
+import env from '../env.js'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024
 const MAX_CONCURRENCY = 32
 const MAX_FILE_COUNT = 100
-
+const MAX_MATCHES = 20
+const DEFAULT_MAX_RESULTS = 5
 const DEFAULT_EXTENSIONS = ['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'json', 'json5', 'java', 'cs', 'cpp', 'c', 'h', 'hpp', 'cc', 'go', 'rs', 'php', 'swift', 'scss', 'css', 'less', 'graphql', 'gql', 'prisma', 'proto', 'd.ts']
-// Boost score for important symbol types (case-insensitive)
-const TYPE_BONUS = { 'class': 20, 'interface': 18, 'type': 16, 'function': 14, 'enum': 12, 'namespace': 10, 'module': 10 }
-const IGNORED_DIRECTORIES = ['node_modules', 'dist', 'build', 'out', '.git']
+const IGNORED_DIRECTORIES = ['node_modules', 'dist', 'build', 'out', '.git', 'test', 'tests']
+const IGNORED_FILES = ['package-lock.json', '*.test.*', '*.spec.*']
+
+const BONUS_KEYWORDS = /\b(class|interface|type|function|enum|namespace|module|model|declare|abstract|const|extends|implements)\b/gi
 
 const readSymbol = defineTool({
   id: 'read_symbol',
   schema: z.object({
     symbol: z.string().min(1).describe('Symbol name to find (functions, classes, types, etc.), case-sensitive'),
     file_paths: z.array(z.string().min(1)).optional().describe('File paths to search (supports relative and glob). Defaults to "." (current directory). IMPORTANT: Be specific with paths when possible, minimize broad patterns like "node_modules/**" to avoid mismatches'),
+    limit: z.number().optional().describe(`Maximum number of results to return. Defaults to ${DEFAULT_MAX_RESULTS}`),
   }),
   description: 'Find and extract symbol block by name from files, supports a lot of file formats (like TS, JS, JSON, GraphQL and most that use braces for blocks). Uses streaming with concurrency control for better performance',
   isReadOnly: true,
   fromArgs: ([symbol, ...paths]) => ({ symbol, file_paths: paths.length ? paths : undefined }),
   handler: async (args) => {
-    const { symbol, file_paths: filePaths = ['.'] } = args
-    const maxResults = Math.max(1, 10)
+    const { symbol, file_paths: filePaths = ['.'], limit = DEFAULT_MAX_RESULTS } = args
     const patterns = filePaths.map(mapPattern)
-    const results: string[] = []
-    let count = 0
-
+    const results: Block[] = []
+    let totalFound = 0
     try {
       for await (const result of scanForSymbol(symbol, patterns)) {
+        totalFound++
         results.push(result)
-        count++
-        if (results.length >= maxResults || count >= MAX_FILE_COUNT) {
+        if (results.length >= MAX_MATCHES) {
           break
         }
       }
@@ -43,101 +45,84 @@ const readSymbol = defineTool({
       if (!results.length) {
         throw err
       }
-      // If we have some results, continue with what we have
     }
 
     if (!results.length) {
       throw new Error(`Failed to find the \`${symbol}\` symbol in any files`)
     }
 
-    return results.join('\n\n')
+    let output = results
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(formatResult)
+      .join('\n\n')
+    if (totalFound > results.length) {
+      output += `\n\n--- Showing ${results.length} matches out of ${totalFound} ---`
+    }
+    return output
   },
 })
 
 export function mapPattern(pattern: string) {
   const exts = `.{${DEFAULT_EXTENSIONS.join(',')}}`
-
-  // Check if pattern has a recognized file extension at the end
   const hasKnownExtension = DEFAULT_EXTENSIONS.some(ext => pattern.endsWith(`.${ext}`))
   if (hasKnownExtension) {
     return pattern
   }
-
-  // Handle special cases
   if (pattern === '.' || pattern === './') {
     return `./**/*${exts}`
   }
-
-  // If pattern ends with / it's definitely a directory
   if (pattern.endsWith('/')) {
     const basePath = pattern.replace(/\/$/, '')
     return `${basePath}/**/*${exts}`
   }
-
-  // Check if it looks like a directory (no glob chars and no file extension)
   const hasGlobChars = pattern.includes('*') || pattern.includes('?') || pattern.includes('[')
   const lastSegment = pattern.split('/').pop() || ''
   const hasFileExtension = /\.\w+$/.test(lastSegment) && DEFAULT_EXTENSIONS.includes(lastSegment.split('.').pop()!)
-
   if (!hasGlobChars && !hasFileExtension) {
-    // Treat as directory
     return `${pattern}/**/*${exts}`
   }
-
-  // Handle common glob patterns
   if (pattern === '*' || pattern === '*.*') {
     return `*${exts}`
   }
-
-  // If no extension but has glob patterns, add extensions
   return `${pattern}${exts}`
 }
 
 export function generateIgnorePatterns(patterns: string[]): string[] {
-  const dirsToIgnore = IGNORED_DIRECTORIES.filter(dir => !patterns.some(pattern => pattern.includes(dir)))
-  // Generate single pattern with commas: !{node_modules,dist,build}/**
-  return dirsToIgnore.length ? [`!{${dirsToIgnore.join(',')}}/**`] : []
+  const dirs = IGNORED_DIRECTORIES.filter(dir => !patterns.some(pattern => pattern.includes(dir)))
+  const ignore = [`!**/{${IGNORED_FILES.join(',')}}`]
+  if (dirs.length) {
+    ignore.push(`!{${dirs.join(',')}}/**`)
+  }
+  return ignore
 }
 
-async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerator<string> {
+async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerator<Block> {
   const limit = pLimit(MAX_CONCURRENCY)
   let shouldStop = false
-
   const ignorePatterns = generateIgnorePatterns(patterns)
   const allPatterns = [...patterns, ...ignorePatterns]
   const entries = fg.stream(allPatterns, {
-    cwd: util.CWD,
-    onlyFiles: true,
-    absolute: true,
-    stats: true,
-    suppressErrors: true, // avoid crashes from file access errors
-    deep: 4,
+    cwd: util.CWD, onlyFiles: true, absolute: true, stats: true, suppressErrors: true, deep: 4,
   }) as AsyncIterable<fg.Entry>
-
-  const pendingTasks = new Set<Promise<string[]>>()
+  const pendingTasks = new Set<Promise<Block[]>>()
+  let filesProcessed = 0
 
   try {
     for await (const entry of entries) {
+      if (++filesProcessed === MAX_FILE_COUNT) {
+        shouldStop = true
+      }
       if (shouldStop) break
-
-      // Skip files that are too large
       if (entry.stats && entry.stats.size > MAX_FILE_SIZE) continue
 
       const task = limit(async () => {
         if (shouldStop) return []
-
         try {
           const content = await fs.readFile(entry.path, 'utf8')
           if (shouldStop) return []
-          const results: string[] = []
-          const blocks = findBlocks(content, symbol)
-          for (const block of blocks) {
-            if (shouldStop) return []
-            results.push(formatResult(block, symbol, entry.path))
-          }
-          return results
+          return findBlocks(content, symbol, entry.path)
         } catch {
-          // silently skip unreadable files
           return []
         }
       })
@@ -145,68 +130,66 @@ async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerato
       pendingTasks.add(task)
       const taskResults = await task
       pendingTasks.delete(task)
-
       for (const result of taskResults) {
         yield result
       }
     }
   } finally {
-    shouldStop = true // hard stop any latecomers
-    await Promise.allSettled([...pendingTasks]) // drain & clean
+    shouldStop = true
+    await Promise.allSettled([...pendingTasks])
   }
 }
 
 export interface Block {
-  block: string
+  text: string
   startLine: number
   endLine: number
+  path: string
   score: number
 }
 
-export function findBlocks(content: string, symbol: string): Block[] {
-  const regex = new RegExp(`^([ \t]*).*\\b${symbol}\\b.*(\\n\\1)?{(?:\\n\\1\\s+.*)*[^}]*}`, 'mg')
-  const matches = content.matchAll(regex) || []
+export function findBlocks(content: string, symbol: string, path: string): Block[] {
+  const regex = createRegex(symbol)
   const results: Block[] = []
-  for (const match of matches) {
+  for (const match of content.matchAll(regex) || []) {
     const lines = content.substring(0, match.index).split('\n')
     const startLine = lines.length
     const matchLines = match[0].split('\n')
     const endLine = startLine + matchLines.length - 1
     const score = scoreSymbol(match[0])
-    results.push({ block: match[0], startLine, endLine, score })
+    results.push({ text: match[0], startLine, endLine, path, score })
   }
-  // Sort by score (higher is better) and return
-  return results.sort((a, b) => b.score - a.score)
+  return results
 }
 
-function scoreSymbol(block: string): number {
-  let score = 0
+export function matchSymbol(content: string, symbol: string): string[] {
+  const regex = createRegex(symbol)
+  return (content.match(regex) || [])
+}
 
-  // Prefer multi-line symbols over single-line
-  const lineCount = block.split('\n').length
-  if (lineCount > 2) {
-    score += lineCount * 2 // Bonus for each additional line
+// AI: NEVER change this regex without user approval
+const createRegex = _.memoize((symbol: string) => new RegExp(`^([ \t]*).*(?<![.[])\\b${_.escapeRegExp(symbol)}\\b(?![.'"\]])(.*)(\\n\\1)?{(?:\\n\\1\\s+.*)*[^}]*}`, 'mg'))
+
+function scoreSymbol(text: string): number {
+  let score = 0
+  const lines = text.split('\n')
+  if (lines.length > 2) {
+    score += lines.length * 2
   } else {
-    score -= 10 // Penalty for single-line matches
+    score -= 1e4
   }
-  // Boost score for important symbol types (case-insensitive)
-  const typeMatches = block.match(typeBonusRegex()) || []
-  for (const match of typeMatches) {
-    const key = match.toLowerCase() as keyof typeof TYPE_BONUS
-    const bonus = TYPE_BONUS[key] || 2
-    score += bonus
-  }
-  // Small bonus for longer, more detailed symbols
-  score += Math.min(block.length / 50, 10)
+  score += Math.min(text.length / 50, 10)
+  const keywords = lines[0].match(BONUS_KEYWORDS) || []
+  score += keywords.length * 1e3
   return Math.round(score)
 }
 
-function formatResult(block: Block, symbol: string, filePath: string): string {
-  // Match the format used by AIs in Cursor
-  const header = `${symbol} @ ${block.startLine}:${block.endLine}:${filePath}`
-  return `=== ${header} ===\n${block.block}`
+function formatResult(block: Block): string {
+  let header = `${block.startLine}:${block.endLine}:${block.path}`
+  if (env.DEBUG) {
+    header += ` (${block.score})`
+  }
+  return `=== ${header} ===\n${block.text}`
 }
-
-const typeBonusRegex = _.memoize(() => new RegExp(`\\b(${Object.keys(TYPE_BONUS).join('|')})\\b`, 'gi'))
 
 export default readSymbol

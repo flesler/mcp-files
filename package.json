@@ -24,6 +24,7 @@
     "start:http": "TRANSPORT=http dist/index.js",
     "dev": "npm run ts -- src/index.ts",
     "dev:http": "TRANSPORT=http npm run dev",
+    "cli": "npm run ts -- src/index.ts",
     "inspect": "npx fastmcp inspect src/index.ts",
     "ts": "tsx",
     "eslint": "eslint --cache",

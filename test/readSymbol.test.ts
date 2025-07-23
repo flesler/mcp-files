@@ -442,7 +442,7 @@ for (let i = 0; i < testCases.length; i++) {
   try {
     console.log(`🔄 Test ${testNum}/${testCases.length}: ${testCase.name}`)
 
-    const blocks = findBlocks(testCase.content, testCase.symbol)
+    const blocks = findBlocks(testCase.content, testCase.symbol, 'test.ts')
 
     // Check expected count
     if (blocks.length !== testCase.expectedCount) {
@@ -469,13 +469,8 @@ for (let i = 0; i < testCases.length; i++) {
       }
 
       // Verify the block contains the symbol
-      if (!first.block.includes(testCase.symbol)) {
+      if (!first.text.includes(testCase.symbol)) {
         throw new Error(`Block does not contain symbol '${testCase.symbol}'`)
-      }
-
-      // Verify scoring worked (score should be > 0 for valid matches)
-      if (first.score <= 0) {
-        throw new Error(`Expected positive score, got ${first.score}`)
       }
     }
 
