@@ -1,18 +1,18 @@
 # MCP Tools
 
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=mcp-files&config=JTdCJTIyY29tbWFuZCUyMiUzQSUyMm5weCUyMC15JTIwbWNwLWZpbGVzJTIyJTdE)
 [![npm version](https://img.shields.io/npm/v/mcp-files.svg)](https://www.npmjs.com/package/mcp-files)
 [![Node.js](https://img.shields.io/node/v/mcp-files.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/docker/v/flesler/mcp-files?label=docker)](https://hub.docker.com/r/flesler/mcp-files)
 
-A comprehensive MCP server providing helpful tools for AI agents like Cursor.
+Enables agents to quickly find and edit code in a codebase with surgical precision. Find symbols, edit them everywhere.
 
 ## 📋 Table of Contents
 
 - [🚀 Quick Start](#-quick-start)
-- [🔧 Installation Examples](#-installation-examples)
 - [🛠️ Available Tools](#️-available-tools)
-- [⚡ Surgical Code Editing: Superhuman Precision](#-surgical-code-editing-superhuman-precision)
+- [⚡ Surgical Code Editing: Surgical Precision](#-surgical-code-editing-surgical-precision)
 - [🎛️ Environment Variables](#️-environment-variables)
 - [🖥️ Server Usage](#️-server-usage)
 - [💻 CLI Usage](#-cli-usage)
@@ -26,9 +26,9 @@ A comprehensive MCP server providing helpful tools for AI agents like Cursor.
 
 ### Option 1: NPX (Recommended)
 
-Add to your MCP client config:
+Add this to `~/.cursor/mcp.json` for Cursor, `~/.config/claude_desktop_config.json` for Claude Desktop.
 
-```bash
+```json
 {
   "mcpServers": {
     "mcp-files": {
@@ -40,40 +40,7 @@ Add to your MCP client config:
 ```
 
 ### Option 2: Docker
-```bash
-# Add to your MCP client config:
-{
-  "mcpServers": {
-    "mcp-files": {
-      "command": "docker",
-      "args": [
-        "run",
-        "--rm",
-        "-i",
-        "flesler/mcp-files"
-      ]
-    }
-  }
-}
-```
 
-## 🔧 Installation Examples
-
-### Cursor (`~/.cursor/mcp.json`)
-
-**Basic configuration (recommended):**
-```json
-{
-  "mcpServers": {
-    "mcp-files": {
-      "command": "npx",
-      "args": ["-y", "mcp-files"]
-    }
-  }
-}
-```
-
-**Docker configuration:**
 ```json
 {
   "mcpServers": {
@@ -90,7 +57,8 @@ Add to your MCP client config:
 }
 ```
 
-**HTTP transport:**
+### Option 3: HTTP transport
+
 ```json
 {
   "mcpServers": {
@@ -106,20 +74,6 @@ Add to your MCP client config:
 }
 ```
 
-### Claude Desktop (`~/.config/claude_desktop_config.json`)
-
-**Basic setup:**
-```json
-{
-  "mcpServers": {
-    "mcp-files": {
-      "command": "npx",
-      "args": ["-y", "mcp-files"]
-    }
-  }
-}
-```
-
 ## 🛠️ **Available Tools**
 
 | Tool | Description | Parameters |
@@ -130,7 +84,7 @@ Add to your MCP client config:
 | `insert_text` | Insert/replace text at precise line ranges. Perfect for direct line operations from code citations (12:15:file.ts) and surgical edits in large files | `file_path`, `from_line`, `text`, `to_line` |
 | `os_notification` | Send OS notifications using native notification systems | `message`, `title?` |
 
-## ⚡ **Surgical Code Editing: Superhuman Precision**
+## ⚡ **Surgical Code Editing: Surgical Precision**
 
 The combination of `read_symbol` + `insert_text` unlocks **revolutionary code editing capabilities** that transform how AI agents work with codebases.
 
@@ -139,7 +93,7 @@ The combination of `read_symbol` + `insert_text` unlocks **revolutionary code ed
 **1. Symbol Discovery (`read_symbol`)** - Find ANY symbol ANYWHERE in your codebase:
 ```typescript
 // Find function/class/interface anywhere in repo
-read_symbol("generateApiKey") 
+read_symbol("generateApiKey")
 // → Returns: exact location (lines 45-52 in src/auth/tokens.ts)
 ```
 
@@ -148,7 +102,7 @@ read_symbol("generateApiKey")
 // Replace specific lines with surgical precision
 insert_text(file: "src/auth/tokens.ts", from_line: 45, to_line: 52, text: "improved implementation")
 
-// Insert new code without disruption  
+// Insert new code without disruption
 insert_text(file: "src/auth/tokens.ts", from_line: 45, text: "// Added security enhancement")
 ```
 
@@ -177,7 +131,7 @@ read_symbol("validateEmail") → lines 23-35 in utils/validation.ts
 insert_text(from_line: 23, to_line: 35, text: "enhanced validation with regex")
 
 # Add documentation to any symbol
-read_symbol("processPayment") → line 87 in payment/processor.ts  
+read_symbol("processPayment") → line 87 in payment/processor.ts
 insert_text(from_line: 87, text: "/** Secure payment processing with fraud detection */")
 
 # Fix bugs anywhere in codebase
@@ -185,7 +139,7 @@ read_symbol("parseUserInput") → lines 156-162 in input/parser.ts
 insert_text(from_line: 156, to_line: 162, text: "sanitized parsing logic")
 ```
 
-**This transforms AI from "helpful assistant" to "superhuman code surgeon"** 🦾
+**This transforms AI from "helpful assistant" to "surgical code surgeon"** 🦾
 
 ## 🎛️ Environment Variables
 

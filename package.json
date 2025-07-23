@@ -1,8 +1,8 @@
 {
   "name": "mcp-files",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "type": "module",
-  "description": "A comprehensive MCP server providing helpful tools for AI agents like Cursor",
+  "description": "Enables agents to quickly find and edit code in a codebase with surgical precision. Find symbols, edit them everywhere",
   "main": "dist/index.js",
   "bin": {
     "mcp-files": "dist/index.js"
