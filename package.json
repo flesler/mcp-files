@@ -83,6 +83,7 @@
     "esbuild": "^0.25.8",
     "eslint": "^8.57.0",
     "tsx": "^4.20.3",
+    "types-package-json": "^2.0.39",
     "typescript": "^5.8.3"
   }
 }
