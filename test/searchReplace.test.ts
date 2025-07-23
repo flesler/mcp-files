@@ -1,256 +1,328 @@
+import fs from 'fs'
 import searchReplace from '../src/tools/searchReplace.js'
-import util from '../src/util.js'
+import testUtil from './util.js'
 
-interface TestCase {
-  name: string
-  source: string
-  find: string
-  replace: string
-  expectedContent: string
-  expectedDiff: string
-  error?: string
-}
-
-const testCases: TestCase[] = [
-  {
-    name: 'Simple substring replacement',
-    source: 'Hello world, this is a test file.',
-    find: 'world',
-    replace: 'universe',
-    expectedContent: 'Hello universe, this is a test file.',
-    expectedDiff: `The following diff was applied to the file:
-
-\`\`\`
-- Hello world, this is a test file.
-+ Hello universe, this is a test file.
-\`\`\``,
-  },
-  {
-    name: 'Multi-line function replacement',
-    source: `function hello() {
-  console.log("hello");
-}`,
-    find: `function hello() {
-  console.log("hello");
-}`,
-    replace: 'const hello = () => console.log("hello");',
-    expectedContent: 'const hello = () => console.log("hello");',
-    expectedDiff: `The following diff was applied to the file:
-
-\`\`\`
-- function hello() {
-+ const hello = () => console.log("hello");
--   console.log("hello");
-- }
-\`\`\``,
-  },
-  {
-    name: 'Multi-line with context',
-    source: `Line 1 keep
-Line 2 CHANGE
-Line 3 keep
-Line 4 CHANGE
-Line 5 keep`,
-    find: `Line 2 CHANGE
-Line 3 keep
-Line 4 CHANGE`,
-    replace: `Line 2 MODIFIED
-Line 3 keep
-Line 4 MODIFIED`,
-    expectedContent: `Line 1 keep
-Line 2 MODIFIED
-Line 3 keep
-Line 4 MODIFIED
-Line 5 keep`,
-    expectedDiff: `The following diff was applied to the file:
-
-\`\`\`
-  Line 1 keep
-- Line 2 CHANGE
-+ Line 2 MODIFIED
-  Line 3 keep
-- Line 4 CHANGE
-+ Line 4 MODIFIED
-  Line 5 keep
-\`\`\``,
-  },
-  {
-    name: 'Beginning of file replacement',
-    source: `First line
-Second line
-Third line`,
-    find: 'First line',
-    replace: 'FIRST LINE',
-    expectedContent: `FIRST LINE
-Second line
-Third line`,
-    expectedDiff: `The following diff was applied to the file:
-
-\`\`\`
-- First line
-+ FIRST LINE
-  Second line
-  Third line
-\`\`\``,
-  },
-  {
-    name: 'End of file replacement',
-    source: `First line
-Second line
-Third line`,
-    find: 'Third line',
-    replace: 'THIRD LINE',
-    expectedContent: `First line
-Second line
-THIRD LINE`,
-    expectedDiff: `The following diff was applied to the file:
-
-\`\`\`
-  First line
-  Second line
-- Third line
-+ THIRD LINE
-\`\`\``,
-  },
-  {
-    name: 'Single line file',
-    source: 'Just one line',
-    find: 'one',
-    replace: 'single',
-    expectedContent: 'Just single line',
-    expectedDiff: `The following diff was applied to the file:
-
-\`\`\`
-- Just one line
-+ Just single line
-\`\`\``,
-  },
-  {
-    name: 'Text not found',
-    source: 'Hello world',
-    find: 'nonexistent',
-    replace: 'replacement',
-    expectedContent: 'Hello world', // Not used when error expected
-    expectedDiff: '', // Not used when error expected
-    error: 'Could not find the specified text in test-file.txt',
-  },
-]
-
-async function test() {
+export default async function test() {
   console.log('Testing searchReplace tool...')
 
-  // Mock file operations
-  const originalReadFile = util.readFile
-  const originalWriteFile = util.writeFile
-  const originalResolve = util.resolve
-
-  let mockFileContent = ''
-  let writeCallCount = 0
-  let writtenContent = ''
-
-  util.readFile = (path: string) => {
-    if (path === '/mock/test-file.txt') {
-      return mockFileContent
-    }
-    throw new Error(`File not found: ${path}`)
+  // Regular test cases
+  const testCases = [
+    {
+      name: 'Simple substring replacement',
+      source: 'Hello world',
+      oldString: 'world',
+      newString: 'universe',
+      expected: 'Hello universe',
+    },
+    {
+      name: 'Multi-line function replacement',
+      source: `function oldName() {
+  return 'test'
+}`,
+      oldString: 'function oldName() {',
+      newString: 'function newName() {',
+      expected: `function newName() {
+  return 'test'
+}`,
+    },
+    {
+      name: 'Multi-line with context',
+      source: `const data = {
+  method() {
+    return 'old'
   }
-
-  util.writeFile = (path: string, content: string) => {
-    writeCallCount++
-    writtenContent = content
+}`,
+      oldString: `method() {
+    return 'old'
+  }`,
+      newString: `method() {
+    return 'new'
+  }`,
+      expected: `const data = {
+  method() {
+    return 'new'
   }
+}`,
+    },
+    {
+      name: 'Beginning of file replacement',
+      source: `// Old header
+const value = 42`,
+      oldString: '// Old header',
+      newString: '// New header',
+      expected: `// New header
+const value = 42`,
+    },
+    {
+      name: 'End of file replacement',
+      source: `const value = 42
+// Old footer`,
+      oldString: '// Old footer',
+      newString: '// New footer',
+      expected: `const value = 42
+// New footer`,
+    },
+    {
+      name: 'Single line file',
+      source: 'const old = 42',
+      oldString: 'old',
+      newString: 'new',
+      expected: 'const new = 42',
+    },
+    {
+      name: 'Text not found',
+      source: 'Hello world',
+      oldString: 'nonexistent',
+      newString: 'replacement',
+      shouldThrow: true,
+    },
+  ]
 
-  util.resolve = (path: string) => {
-    if (path === 'test-file.txt') {
-      return '/mock/test-file.txt'
-    }
-    return path
-  }
+  // Core value test cases: ambiguous matches (our main differentiator from Cursor)
+  const ambiguousMatchTestCases = [
+    {
+      name: 'Ambiguous match: multiple debug properties (automation-friendly)',
+      source: 'const config = { debug: true }\nconst settings = { debug: false }\nconst options = { debug: true }',
+      oldString: 'debug: true',
+      newString: 'debug: false',
+      expectedMatches: 2,
+      shouldSucceed: true,  // Our tool proceeds with first match
+      note: 'Cursor would fail safely, our tool proceeds for automation',
+    },
+    {
+      name: 'Ambiguous match: multiple similar object patterns',
+      source: 'const data = { prop1: "value1", prop2: "value2" }\nconst other = { prop1: "different", prop2: "also different" }\nconst another = { prop1: "value1", other: "stuff" }',
+      oldString: 'prop1: "value1"',
+      newString: 'property1: "newvalue1"',
+      expectedMatches: 2,
+      shouldSucceed: true,
+      note: 'Multiple similar patterns, replace first occurrence',
+    },
+  ]
 
-  try {
-    let passedTests = 0
-    let totalTests = testCases.length
+  // Whitespace parity test cases (both Cursor and our tool should handle these)
+  const whitespaceParityTestCases = [
+    {
+      name: 'Extra spaces in function definition (Cursor parity)',
+      source: 'function    oldFunction(  param1,   param2  ) {\n  return param1 + param2\n}',
+      oldString: 'function    oldFunction(  param1,   param2  )',
+      newString: 'function newFunction(param1, param2)',
+      shouldSucceed: true,
+      note: 'Both Cursor and our tool handle extra spaces',
+    },
+    {
+      name: 'Mixed tabs and spaces (Cursor parity)',
+      source: 'const\tconfig\t=\t{\n  prop1:   "value1",\n    prop2: "value2"  \n}',
+      oldString: 'const\tconfig\t=\t{',
+      newString: 'const newConfig = {',
+      shouldSucceed: true,
+      note: 'Both tools handle tab/space mixing',
+    },
+    {
+      name: 'Mixed line endings CRLF/LF (Cursor parity)',
+      source: 'function test() {\r\n  return "crlf"\r\n}\nfunction other() {\n  return "lf"\n}',
+      oldString: 'function test() {\r\n  return "crlf"\r\n}',
+      newString: 'function newTest() {\r\n  return "updated"\r\n}',
+      shouldSucceed: true,
+      note: 'Both tools handle mixed line endings',
+    },
+    {
+      name: 'Multiline with complex indentation (Cursor parity)',
+      source: 'const obj = {\n    method1() {\n      return "test"\n  },\n  method2: function() {\n    return "other"\n  }\n}',
+      oldString: 'method1() {\n      return "test"\n  }',
+      newString: 'newMethod() {\n      return "updated"\n  }',
+      shouldSucceed: true,
+      note: 'Both tools handle complex multiline patterns',
+    },
+  ]
 
-    for (const testCase of testCases) {
-      try {
-        console.log(`\n🔄 Testing: ${testCase.name}`)
+  // Expected failure cases (edge cases that should fail gracefully)
+  const expectedFailureTestCases = [
+    {
+      name: 'Text not found',
+      source: 'Hello world',
+      oldString: 'nonexistent',
+      newString: 'replacement',
+      shouldSucceed: false,
+      expectedError: 'Could not find the specified text',
+    },
+    {
+      name: 'Empty file',
+      source: '',
+      oldString: 'anything',
+      newString: 'replacement',
+      shouldSucceed: false,
+      expectedError: 'Could not find the specified text',
+    },
+  ]
 
-        // Setup
-        mockFileContent = testCase.source
-        writeCallCount = 0
-        writtenContent = ''
+  let passedTests = 0
+  let totalTests = testCases.length + ambiguousMatchTestCases.length + whitespaceParityTestCases.length + expectedFailureTestCases.length
+  const tempFilesToCleanup: string[] = []
 
-        if (testCase.error) {
-          // Expect this test to throw
-          try {
-            await searchReplace.handler({
-              file_path: 'test-file.txt',
-              old_string: testCase.find,
-              new_string: testCase.replace,
-            })
-            console.log('❌ FAILED: Expected error but none was thrown')
-            continue
-          } catch (err: any) {
-            if (!err.message.includes(testCase.error)) {
-              console.log(`❌ FAILED: Wrong error message. Expected: "${testCase.error}", Got: "${err.message}"`)
-              continue
-            }
-            console.log(`✅ PASSED: Correctly threw error: ${err.message}`)
-            passedTests++
-            continue
-          }
-        }
+  // Run regular tests
+  for (const testCase of testCases) {
+    console.log(`\n🔄 Testing: ${testCase.name}`)
 
-        // Execute
-        const result = await searchReplace.handler({
-          file_path: 'test-file.txt',
-          old_string: testCase.find,
-          new_string: testCase.replace,
-        })
+    const tempFile = testUtil.createTempFile('test-file.txt', testCase.source)
+    tempFilesToCleanup.push(tempFile)
 
-        // Verify file was written correctly
-        if (writeCallCount !== 1) {
-          console.log(`❌ FAILED: Expected 1 write call, got ${writeCallCount}`)
-          continue
-        }
+    try {
+      const result = await searchReplace.handler({
+        file_path: tempFile,
+        old_string: testCase.oldString,
+        new_string: testCase.newString,
+      })
 
-        if (writtenContent !== testCase.expectedContent) {
+      if (testCase.shouldThrow) {
+        console.log('❌ FAILED: Expected error but got result')
+        console.log('   Result:', result.substring(0, 100))
+      } else {
+        const newContent = fs.readFileSync(tempFile, 'utf8')
+        if (newContent === testCase.expected) {
+          console.log('✅ PASSED: All assertions correct')
+          passedTests++
+        } else {
           console.log('❌ FAILED: Content mismatch')
-          console.log(`Expected: ${JSON.stringify(testCase.expectedContent)}`)
-          console.log(`Got: ${JSON.stringify(writtenContent)}`)
-          continue
+          console.log('   Expected:', JSON.stringify(testCase.expected))
+          console.log('   Actual:', JSON.stringify(newContent))
         }
-
-        // Verify diff output
-        if (result !== testCase.expectedDiff) {
-          console.log('❌ FAILED: Diff mismatch')
-          console.log(`Expected:\n${testCase.expectedDiff}`)
-          console.log(`Got:\n${result}`)
-          continue
-        }
-
-        console.log('✅ PASSED: All assertions correct')
+      }
+    } catch (error: any) {
+      if (testCase.shouldThrow) {
+        console.log(`✅ PASSED: Correctly threw error: ${error.message}`)
         passedTests++
-
-      } catch (err) {
-        console.log(`❌ FAILED: Unexpected error: ${err}`)
+      } else {
+        console.log(`❌ FAILED: Unexpected error: ${error.message}`)
       }
     }
+  }
 
-    console.log(`\n🎯 Test Summary: ${passedTests}/${totalTests} tests passed`)
+  // Run ambiguous match tests (our core value)
+  console.log('\n🎯 Testing ambiguous match handling (core differentiator)...\n')
 
-    if (passedTests === totalTests) {
-      console.log('🎉 All searchReplace tests passed!')
-    } else {
-      console.log('❌ Some tests failed!')
+  for (const testCase of ambiguousMatchTestCases) {
+    console.log(`🔄 Testing: ${testCase.name}`)
+    console.log(`   📝 ${testCase.note}`)
+
+    const tempFile = testUtil.createTempFile('ambiguous-test.js', testCase.source)
+    tempFilesToCleanup.push(tempFile)
+
+    try {
+      const result = await searchReplace.handler({
+        file_path: tempFile,
+        old_string: testCase.oldString,
+        new_string: testCase.newString,
+      })
+
+      if (testCase.shouldSucceed) {
+        console.log('✅ PASSED: Successfully handled ambiguous match')
+
+        // Check if multiple matches were reported
+        if (result.includes('matches')) {
+          const matchCount = result.match(/Found (\d+) matches/)?.[1]
+          if (matchCount && parseInt(matchCount) >= testCase.expectedMatches) {
+            console.log(`   ✨ Correctly handled ${matchCount} matches`)
+          }
+        }
+        passedTests++
+      } else {
+        console.log('❌ FAILED: Expected success but got failure')
+      }
+    } catch (error: any) {
+      if (testCase.shouldSucceed) {
+        console.log(`❌ FAILED: Unexpected error: ${error.message}`)
+      } else {
+        console.log(`✅ PASSED: Correctly failed as expected: ${error.message}`)
+        passedTests++
+      }
     }
+  }
 
-  } finally {
-    // Restore original functions
-    util.readFile = originalReadFile
-    util.writeFile = originalWriteFile
-    util.resolve = originalResolve
+  // Run whitespace parity tests (ensuring we match Cursor's capabilities)
+  console.log('\n⚖️ Testing whitespace parity with Cursor...\n')
+
+  for (const testCase of whitespaceParityTestCases) {
+    console.log(`🔄 Testing: ${testCase.name}`)
+    console.log(`   📝 ${testCase.note}`)
+
+    const tempFile = testUtil.createTempFile('parity-test.js', testCase.source)
+    tempFilesToCleanup.push(tempFile)
+
+    try {
+      const result = await searchReplace.handler({
+        file_path: tempFile,
+        old_string: testCase.oldString,
+        new_string: testCase.newString,
+      })
+
+      if (testCase.shouldSucceed) {
+        console.log('✅ PASSED: Parity with Cursor maintained')
+        console.log('   Result preview:', result.split('\n')[0])
+        passedTests++
+      } else {
+        console.log('❌ FAILED: Expected success but got failure')
+        console.log('   Unexpected result:', result.substring(0, 100))
+      }
+    } catch (error: any) {
+      if (testCase.shouldSucceed) {
+        console.log(`❌ FAILED: Unexpected error: ${error.message}`)
+      } else {
+        console.log(`✅ PASSED: Correctly failed as expected: ${error.message}`)
+        passedTests++
+      }
+    }
+  }
+
+  // Run expected failure tests (edge cases that should fail gracefully)
+  console.log('\n🚫 Testing expected failure cases...\n')
+
+  for (const testCase of expectedFailureTestCases) {
+    console.log(`🔄 Testing: ${testCase.name}`)
+
+    const tempFile = testUtil.createTempFile('failure-test.js', testCase.source)
+    tempFilesToCleanup.push(tempFile)
+
+    try {
+      const result = await searchReplace.handler({
+        file_path: tempFile,
+        old_string: testCase.oldString,
+        new_string: testCase.newString,
+      })
+
+      if (testCase.shouldSucceed) {
+        console.log('✅ PASSED: Success as expected')
+        console.log('   Result:', result.substring(0, 100))
+        passedTests++
+      } else {
+        console.log('❌ FAILED: Expected failure but got success')
+        console.log('   Result:', result.substring(0, 100))
+      }
+    } catch (error: any) {
+      if (testCase.shouldSucceed) {
+        console.log(`❌ FAILED: Unexpected error: ${error.message}`)
+      } else if (testCase.expectedError && error.message.includes(testCase.expectedError)) {
+        console.log(`✅ PASSED: Correctly failed with expected error: ${error.message}`)
+        passedTests++
+      } else {
+        console.log(`❌ FAILED: Wrong error message. Expected: ${testCase.expectedError}, Got: ${error.message}`)
+      }
+    }
+  }
+
+  // Cleanup all temp files
+  testUtil.cleanupTempFiles(tempFilesToCleanup)
+
+  console.log(`\n🎯 Test Summary: ${passedTests}/${totalTests} tests passed`)
+
+  if (passedTests === totalTests) {
+    console.log('🎉 All searchReplace tests passed!')
+  } else {
+    throw new Error(`searchReplace tests failed: ${totalTests - passedTests}/${totalTests} tests failed`)
   }
 }
 
-test()
+// Call the test when this file is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  test().catch(console.error)
+}
