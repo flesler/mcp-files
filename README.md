@@ -197,6 +197,16 @@ node dist/index.js read_symbol "functionName" file.ts
 
 ### **Common Issues**
 
+**ERR_MODULE_NOT_FOUND when running `npx mcp-files`**
+- **Problem**: Error like `Cannot find module '@modelcontextprotocol/sdk/dist/esm/server/index.js'` when running `npx mcp-files`
+- **Cause**: Corrupt or incomplete npx cache preventing proper dependency resolution
+- **Solution**: Clear the npx cache and try again:
+  ```bash
+  npx clear-npx-cache
+  npx mcp-files
+  ```
+- **Note**: This issue can occur on both Node.js v20 and v22, and the cache clear resolves it
+
 **Tools not showing up in MCP client:**
 - Verify Node.js version is 20 or higher
 - Try restarting your MCP client after configuration changes
