@@ -1,26 +1,23 @@
 import fs from 'fs'
-import { globSync } from 'glob'
 import _ from 'lodash'
 import { createRequire } from 'module'
 import { z } from 'zod'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
 
-const schema = z.object({
-  symbols: z.array(z.string().min(1)).describe('Symbol names to find (functions, classes, types, etc.)'),
-  file_paths: z.array(z.string().min(1)).describe('File paths to search (supports relative paths, glob patterns, and package names)'),
-})
-
 const readSymbol = defineTool({
   id: 'read_symbol',
-  schema,
-  description: 'Find and extract code blocks by symbol name from files. Supports glob patterns and package names for file matching.',
+  schema: z.object({
+    symbols: z.array(z.string().min(1)).describe('Symbol names to find (functions, classes, types, etc.), case-sensitive'),
+    file_paths: z.array(z.string().min(1)).describe('File paths to search (supports relative paths, glob patterns, and require() package names). IMPORTANT: Be specific with paths, minimize broad patterns like "node_modules/**/*.ts" which are slow and more likely to match false positives'),
+  }),
+  description: 'Find and extract symbol(s) block by name from files, supports a lot of file formats (like TS, JS, JSON, GraphQL and most that use braces for blocks). For better performance and accuracy, prefer targeted directories rather than broad recursive searches',
   isReadOnly: true,
-  fromArgs: ([symbols, ...paths]: string[]) => ({
+  fromArgs: ([symbols, ...paths]) => ({
     symbols: symbols.split(',').map(s => s.trim()),
     file_paths: paths,
   }),
-  handler: (args: z.infer<typeof schema>) => {
+  handler: (args) => {
     const { symbols, file_paths: filePaths } = args
     const expandedFiles = expandGlobPatterns(filePaths)
     const showSymbolName = symbols.length > 1
@@ -70,7 +67,7 @@ function findBlocks(content: string, symbol: string): Block[] {
     const startLine = lines.length
     const matchLines = match[0].split('\n')
     const endLine = startLine + matchLines.length - 1
-    results.push({ block: match[0].trim(), startLine, endLine })
+    results.push({ block: match[0], startLine, endLine })
   }
   return results
 }
@@ -103,7 +100,7 @@ function listFiles(file: string): string[] {
   // Check for glob patterns first (before trying to stat)
   if (file.includes('*') || file.includes('?') || file.includes('[')) {
     try {
-      return glob(file)
+      return util.glob(file)
     } catch {
       return []
     }
@@ -116,7 +113,7 @@ function listFiles(file: string): string[] {
       return [path]
     }
     if (stat.isDirectory()) {
-      return glob(`${path.replace(/\/$/, '')}/**/*`)
+      return util.glob(`${path.replace(/\/$/, '')}/**/*`)
     }
   } catch {}
   try {
@@ -128,7 +125,7 @@ function listFiles(file: string): string[] {
 }
 
 // Prioritize index files, TS, etc. Those we know can have symbols
-const PRIORITY = ['index.', '.ts', '.js', '.json', '.graphql', '.prisma'].reverse()
+const PRIORITY = ['index.', '.d.ts', '.ts', '.js', '.json', '.graphql', '.prisma'].reverse()
 
 function scoreFile(file: string): number {
   let score = 0
@@ -144,6 +141,3 @@ const getRequire = _.memoize(() => {
   return createRequire(util.resolve('package.json'))
 })
 
-function glob(pattern: string): string[] {
-  return globSync(pattern, { cwd: util.CWD, maxDepth: 4 })
-}

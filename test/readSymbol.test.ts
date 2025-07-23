@@ -259,6 +259,52 @@ function genericFunc<T>(param: T) {
     symbols: ['ToolConfig'],
     expectedSymbols: ['ToolConfig'],
   },
+
+  // One-liner behavior tests (Task 1: Document current regex behavior)
+  {
+    name: 'One-liner function behavior (current limitation)',
+    source: 'function oneLiner() { return 42 }',
+    symbols: ['oneLiner'],
+    expectedSymbols: ['oneLiner'], // Current regex does match one-liners (known limitation)
+  },
+
+  {
+    name: 'One-liner arrow function behavior',
+    source: 'const arrow = () => { return "test" }',
+    symbols: ['arrow'],
+    expectedSymbols: ['arrow'], // Current regex matches this too
+  },
+
+  {
+    name: 'Multi-line function should still be matched',
+    source: `function multiLine() {
+  return {
+    value: 42
+  }
+}`,
+    symbols: ['multiLine'],
+    expectedSymbols: ['multiLine'], // Should still find it
+  },
+
+  {
+    name: 'Class with methods should still be matched',
+    source: `class TestClass {
+  method() {
+    return true
+  }
+}`,
+    symbols: ['TestClass'],
+    expectedSymbols: ['TestClass'], // Should still find it
+  },
+
+  {
+    name: 'Interface should still be matched (multi-line)',
+    source: `interface TestInterface {
+  prop: string
+}`,
+    symbols: ['TestInterface'],
+    expectedSymbols: ['TestInterface'], // Should still find it
+  },
 ]
 
 async function test() {

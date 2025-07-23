@@ -1,5 +1,6 @@
 import { execSync } from 'child_process'
 import fs from 'fs'
+import { GlobOptions, globSync } from 'glob'
 import _ from 'lodash'
 import { dirname, isAbsolute, resolve } from 'path'
 import { fileURLToPath } from 'url'
@@ -7,10 +8,10 @@ import { fileURLToPath } from 'url'
 /** Object.keys() with more accurate types */
 export type KeysOf<T> = Array<keyof T>
 
+// From Cursor
 const CWD = process.env.WORKSPACE_FOLDER_PATHS || process.cwd()
 
 const util = {
-  // From Cursor
   CWD,
   // Relative to the project root
   REPO: resolve(dirname(fileURLToPath(import.meta.url)), '..'),
@@ -71,6 +72,10 @@ const util = {
   },
 
   execSync,
+
+  glob(pattern: string, options: GlobOptions = {}): string[] {
+    return globSync(pattern, { ...options, cwd: util.CWD, maxDepth: 4 }) as string[]
+  },
 }
 
 export default util

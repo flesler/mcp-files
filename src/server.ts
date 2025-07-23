@@ -1,11 +1,9 @@
 import { FastMCP } from 'fastmcp'
-
 import cli from './cli.js'
 import env from './env.js'
 import logger from './logger.js'
 import pkg from './pkg.js'
 import tools from './tools.js'
-
 
 async function start() {
   const server = new FastMCP({

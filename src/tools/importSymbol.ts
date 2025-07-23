@@ -3,21 +3,19 @@ import { z } from 'zod'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
 
-const schema = z.object({
-  module_path: z.string().min(1).describe('Module path to import (e.g., "lodash", "./utils", "@package/name")'),
-  property: z.string().optional().describe('Optional property to access on the imported module'),
-})
-
 const importSymbol = defineTool({
   id: 'import_symbol',
-  schema,
-  description: 'Import and inspect JavaScript/TypeScript modules and their properties.',
+  schema: z.object({
+    module_path: z.string().min(1).describe('Module path to import (e.g., "lodash", "./utils", "@package/name")'),
+    property: z.string().optional().describe('Only the given property from the module is dumped'),
+  }),
+  description: 'Import and inspect JavaScript/TypeScript modules ala require(), or import()',
   isReadOnly: true,
-  fromArgs: ([module_path = '', property]: string[]) => ({
+  fromArgs: ([module_path = '', property]) => ({
     module_path,
     property: property || undefined,
   }),
-  handler: async (args: z.infer<typeof schema>) => {
+  handler: async (args) => {
     const { module_path: modulePath, property } = args
     const resolvedPath = modulePath.startsWith('.')
       ? util.resolve(modulePath)

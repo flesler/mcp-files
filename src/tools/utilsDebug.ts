@@ -4,8 +4,6 @@ import pkg from '../pkg.js'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
 
-const schema = z.object({})
-
 const utilsDebug = defineTool({
   id: 'utils_debug',
   schema: z.object({}),
@@ -16,7 +14,7 @@ const utilsDebug = defineTool({
   isReadOnly: true,
   isEnabled: env.DEBUG,
   fromArgs: () => ({}),
-  handler: (args: z.infer<typeof schema>, context) => {
+  handler: (args, context) => {
     return {
       ...args, processEnv: process.env, argv: process.argv,
       env, context, version: pkg.version, CWD: util.CWD, REPO: util.REPO,

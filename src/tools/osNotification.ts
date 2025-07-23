@@ -4,21 +4,19 @@ import { z } from 'zod'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
 
-const schema = z.object({
-  message: z.string().min(1).describe('The notification message to display'),
-  title: z.string().optional().describe('Optional notification title (defaults to current directory name)'),
-})
-
 const osNotification = defineTool({
   id: 'os_notification',
-  schema,
+  schema: z.object({
+    message: z.string().min(1).describe('The notification message to display'),
+    title: z.string().optional().describe('Defaults to current project, generally omit'),
+  }),
   description: 'Send OS notifications using native notification systems.',
   isReadOnly: true,
-  fromArgs: ([message = '', title = '']: string[]) => ({
+  fromArgs: ([message = '', title = '']) => ({
     message,
     title: title || undefined,
   }),
-  handler: (args: z.infer<typeof schema>) => {
+  handler: (args) => {
     const { message, title = basename(util.CWD) } = args
     const strategy = getStrategy()
     const cmd = strategy.cmd(title, message)

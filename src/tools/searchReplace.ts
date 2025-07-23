@@ -4,25 +4,23 @@ import env from '../env.js'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
 
-const schema = z.object({
-  file_path: z.string().min(1).describe('Path to the file (supports relative and absolute paths)'),
-  old_string: z.string().min(1).describe('Exact text to replace (must be unique in file)'),
-  new_string: z.string().describe('Replacement text'),
-})
-
 const ID = 'search_replace'
 const searchReplace = defineTool({
   id: ID,
   name: `${env.OVERRIDE_S_R ? '': 'better_'}${ID}`,
-  schema,
+  schema: z.object({
+    file_path: z.string().min(1).describe('Path to the file (supports relative and absolute paths)'),
+    old_string: z.string().min(1).describe('Exact text to replace (must be unique in file)'),
+    new_string: z.string().describe('Replacement text'),
+  }),
   description: 'Search and replace text in files with improved whitespace handling and clear error messages.',
   isReadOnly: false,
-  fromArgs: ([filePath = '', oldString = '', newString = '']: string[]) => ({
+  fromArgs: ([filePath = '', oldString = '', newString = '']) => ({
     file_path: filePath,
     old_string: oldString,
     new_string: newString,
   }),
-  handler: (args: z.infer<typeof schema>) => {
+  handler: (args) => {
     const { file_path: filePath, old_string: oldString, new_string: newString } = args
     const fullPath = util.resolve(filePath)
     const content = util.readFile(fullPath)

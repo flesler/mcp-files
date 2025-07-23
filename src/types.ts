@@ -14,7 +14,7 @@ export interface ToolConfig<N extends string, S extends ZodSchema = ZodSchema> {
   isReadOnly?: boolean
   isEnabled?: boolean
   isResource?: boolean
-  handler: (args: z.infer<S>, context: any) => Promise<any> | any
+  handler: (args: z.infer<S>, context?: any) => Promise<any> | any
   fromArgs: (args: string[]) => z.infer<S>
 }
 
