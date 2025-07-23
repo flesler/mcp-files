@@ -9,25 +9,25 @@ interface TestCase {
 const testCases: TestCase[] = [
   {
     input: ['src/**/*.ts'],
-    expected: ['!{node_modules|dist|build|out|.git}/**'],
+    expected: ['!{node_modules,dist,build,out,.git}/**'],
     description: 'Should ignore all default directories when none specified',
   },
 
   {
     input: ['src/**/*.ts', 'node_modules/@types/**/*.d.ts'],
-    expected: ['!{dist|build|out|.git}/**'],
+    expected: ['!{dist,build,out,.git}/**'],
     description: 'Should NOT ignore node_modules when explicitly included',
   },
 
   {
     input: ['dist/assets/**/*.js'],
-    expected: ['!{node_modules|build|out|.git}/**'],
+    expected: ['!{node_modules,build,out,.git}/**'],
     description: 'Should NOT ignore dist when explicitly included',
   },
 
   {
     input: ['node_modules', 'dist', 'build'],
-    expected: ['!{out|.git}/**'],
+    expected: ['!{out,.git}/**'],
     description: 'Should only ignore directories not explicitly requested',
   },
 
@@ -39,8 +39,14 @@ const testCases: TestCase[] = [
 
   {
     input: ['src/**/*.ts', 'test/**/*.ts', 'docs/**/*.md'],
-    expected: ['!{node_modules|dist|build|out|.git}/**'],
+    expected: ['!{node_modules,dist,build,out,.git}/**'],
     description: 'Should ignore all when no ignored dirs mentioned',
+  },
+
+  {
+    input: ['.'],
+    expected: ['!{node_modules,dist,build,out,.git}/**'],
+    description: 'Should ignore all default directories when using current directory pattern "."',
   },
 ]
 

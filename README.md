@@ -109,7 +109,7 @@ Add to your MCP client config:
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `read_symbol` | Find and extract code blocks by symbol name from files | `symbol`, `file_paths[]` |
+| `read_symbol` | Find and extract code blocks by symbol name from files | `symbol`, `file_paths[]?` |
 | `import_symbol` | Import and inspect JavaScript/TypeScript modules and their properties | `module_path`, `property?` |
 | `search_replace` | Search and replace with intelligent whitespace handling and automation-friendly multiple match resolution | `file_path`, `old_string`, `new_string` |
 | `insert_text` | Insert/replace text at precise line ranges. Perfect for direct line operations from code citations (12:15:file.ts) and surgical edits in large files | `file_path`, `from_line`, `text`, `to_line` (optional) |
@@ -147,8 +147,11 @@ DEBUG=true mcp-files
 All tools can be used directly from the command line:
 
 ```bash
-# Find symbol in code
+# Find symbol in code (specific file)
 mcp-files read_symbol "MyInterface" src/types.ts
+
+# Find symbol in current directory (default)
+mcp-files read_symbol "MyInterface"
 
 # Inspect imports
 mcp-files import_symbol lodash get
@@ -188,6 +191,9 @@ npm run ts test/index.test.ts
 
 # CLI testing
 node dist/index.js read_symbol "functionName" file.ts
+
+# Or search current directory
+node dist/index.js read_symbol "functionName"
 ```
 
 ## 🛠️ Troubleshooting

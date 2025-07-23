@@ -4,6 +4,7 @@ import _ from 'lodash'
 import pLimit from 'p-limit'
 import { z } from 'zod'
 import { defineTool } from '../tools.js'
+import util from '../util.js'
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const MAX_CONCURRENCY = 32
@@ -18,24 +19,23 @@ const readSymbol = defineTool({
   id: 'read_symbol',
   schema: z.object({
     symbol: z.string().min(1).describe('Symbol name to find (functions, classes, types, etc.), case-sensitive'),
-    file_paths: z.array(z.string().min(1)).describe('File paths to search (supports relative paths and glob patterns). For directories, append /** is automatic. IMPORTANT: Be specific with paths, minimize broad patterns like "node_modules/**/*.ts" which are slow'),
+    file_paths: z.array(z.string().min(1)).optional().describe('File paths to search (supports relative and glob). Defaults to "." (current directory). IMPORTANT: Be specific with paths when possible, minimize broad patterns like "node_modules/**" to avoid mismatches'),
   }),
   description: 'Find and extract symbol block by name from files, supports a lot of file formats (like TS, JS, JSON, GraphQL and most that use braces for blocks). Uses streaming with concurrency control for better performance',
   isReadOnly: true,
-  fromArgs: ([symbol, ...paths]) => ({ symbol, file_paths: paths }),
+  fromArgs: ([symbol, ...paths]) => ({ symbol, file_paths: paths.length ? paths : undefined }),
   handler: async (args) => {
-    const { symbol, file_paths: filePaths } = args
+    const { symbol, file_paths: filePaths = ['.'] } = args
     const maxResults = Math.max(1, 10)
     const patterns = filePaths.map(mapPattern)
     const results: string[] = []
-    let filesProcessed = 0
-    try {
-      for await (const match of scanForSymbol(symbol, patterns)) {
-        results.push(match)
-        filesProcessed++
+    let count = 0
 
-        // Stop if we have enough results or processed too many files
-        if (results.length >= maxResults || filesProcessed >= MAX_FILE_COUNT) {
+    try {
+      for await (const result of scanForSymbol(symbol, patterns)) {
+        results.push(result)
+        count++
+        if (results.length >= maxResults || count >= MAX_FILE_COUNT) {
           break
         }
       }
@@ -47,7 +47,7 @@ const readSymbol = defineTool({
     }
 
     if (!results.length) {
-      throw new Error('No symbols found in any files')
+      throw new Error(`Failed to find the \`${symbol}\` symbol in any files`)
     }
 
     return results.join('\n\n')
@@ -95,11 +95,8 @@ export function mapPattern(pattern: string) {
 
 export function generateIgnorePatterns(patterns: string[]): string[] {
   const dirsToIgnore = IGNORED_DIRECTORIES.filter(dir => !patterns.some(pattern => pattern.includes(dir)))
-  if (!dirsToIgnore.length) {
-    return []
-  }
-  // Generate single pattern with braces: !{node_modules|dist|build}/**
-  return [`!{${dirsToIgnore.join('|')}}/**`]
+  // Generate single pattern with commas: !{node_modules,dist,build}/**
+  return dirsToIgnore.length ? [`!{${dirsToIgnore.join(',')}}/**`] : []
 }
 
 async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerator<string> {
@@ -109,6 +106,7 @@ async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerato
   const ignorePatterns = generateIgnorePatterns(patterns)
   const allPatterns = [...patterns, ...ignorePatterns]
   const entries = fg.stream(allPatterns, {
+    cwd: util.CWD,
     onlyFiles: true,
     absolute: true,
     stats: true,
@@ -212,4 +210,3 @@ function formatResult(block: Block, symbol: string, filePath: string): string {
 const typeBonusRegex = _.memoize(() => new RegExp(`\\b(${Object.keys(TYPE_BONUS).join('|')})\\b`, 'gi'))
 
 export default readSymbol
-
