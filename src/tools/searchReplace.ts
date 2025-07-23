@@ -25,6 +25,11 @@ const searchReplace = defineTool({
     const fullPath = util.resolve(filePath)
     const content = util.readFile(fullPath)
 
+    // Validate that the replacement would actually change something
+    if (oldString.includes(newString)) {
+      throw new Error(`Redundant replacement: old_string already contains new_string. Old: "${oldString}", New: "${newString}"`)
+    }
+
     // Core strategies: exact match + whitespace flexibility (matching Cursor's capability)
     const strategies = [
       {

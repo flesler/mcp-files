@@ -168,7 +168,7 @@ export function matchSymbol(content: string, symbol: string): string[] {
 }
 
 // AI: NEVER change this regex without user approval
-const createRegex = _.memoize((symbol: string) => new RegExp(`^([ \t]*).*(?<![.[])\\b${_.escapeRegExp(symbol)}\\b(?![.'"\]])(.*)(\\n\\1)?{(?:\\n\\1\\s+.*)*[^}]*}`, 'mg'))
+const createRegex = _.memoize((symbol: string) => new RegExp(`^([ \t]*).*(?<![([.'"])\\b${_.escapeRegExp(symbol)}\\b(?![:.'")\]])(.*)(\\n\\1)?{(?:\\n\\1\\s+.*)*[^}]*}`, 'mg'))
 
 function scoreSymbol(text: string): number {
   let score = 0

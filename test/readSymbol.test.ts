@@ -217,11 +217,7 @@ declare module 'my-module' {
   export function func(): void
 }`,
     symbol: 'my-module',
-    expectedCount: 1,
-    expectedFirst: {
-      startLine: 2,
-      endLine: 4,
-    },
+    expectedCount: 0, // Symbol is quoted, so we don't match it (avoids false positives)
   },
 
   // JSON-like structure
