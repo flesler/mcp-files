@@ -86,7 +86,6 @@ const value = 42`,
       oldString: 'debug: true',
       newString: 'debug: false',
       expectedMatches: 2,
-      shouldSucceed: true,  // Our tool proceeds with first match
       note: 'Cursor would fail safely, our tool proceeds for automation',
     },
     {
@@ -95,7 +94,6 @@ const value = 42`,
       oldString: 'prop1: "value1"',
       newString: 'property1: "newvalue1"',
       expectedMatches: 2,
-      shouldSucceed: true,
       note: 'Multiple similar patterns, replace first occurrence',
     },
   ]
@@ -107,7 +105,6 @@ const value = 42`,
       source: 'function    oldFunction(  param1,   param2  ) {\n  return param1 + param2\n}',
       oldString: 'function    oldFunction(  param1,   param2  )',
       newString: 'function newFunction(param1, param2)',
-      shouldSucceed: true,
       note: 'Both Cursor and our tool handle extra spaces',
     },
     {
@@ -115,7 +112,6 @@ const value = 42`,
       source: 'const\tconfig\t=\t{\n  prop1:   "value1",\n    prop2: "value2"  \n}',
       oldString: 'const\tconfig\t=\t{',
       newString: 'const newConfig = {',
-      shouldSucceed: true,
       note: 'Both tools handle tab/space mixing',
     },
     {
@@ -123,7 +119,6 @@ const value = 42`,
       source: 'function test() {\r\n  return "crlf"\r\n}\nfunction other() {\n  return "lf"\n}',
       oldString: 'function test() {\r\n  return "crlf"\r\n}',
       newString: 'function newTest() {\r\n  return "updated"\r\n}',
-      shouldSucceed: true,
       note: 'Both tools handle mixed line endings',
     },
     {
@@ -131,7 +126,6 @@ const value = 42`,
       source: 'const obj = {\n    method1() {\n      return "test"\n  },\n  method2: function() {\n    return "other"\n  }\n}',
       oldString: 'method1() {\n      return "test"\n  }',
       newString: 'newMethod() {\n      return "updated"\n  }',
-      shouldSucceed: true,
       note: 'Both tools handle complex multiline patterns',
     },
   ]
@@ -139,11 +133,17 @@ const value = 42`,
   // Expected failure cases (edge cases that should fail gracefully)
   const expectedFailureTestCases = [
     {
+      name: 'Redundant replacement (new_string already in old_string)',
+      source: 'Hello world',
+      oldString: 'Hello world test',
+      newString: 'world',
+      expectedError: 'Redundant replacement: old_string already contains new_string',
+    },
+    {
       name: 'Text not found',
       source: 'Hello world',
       oldString: 'nonexistent',
       newString: 'replacement',
-      shouldSucceed: false,
       expectedError: 'Could not find the specified text',
     },
     {
@@ -151,7 +151,6 @@ const value = 42`,
       source: '',
       oldString: 'anything',
       newString: 'replacement',
-      shouldSucceed: false,
       expectedError: 'Could not find the specified text',
     },
   ]
@@ -215,27 +214,18 @@ const value = 42`,
         new_string: testCase.newString,
       })
 
-      if (testCase.shouldSucceed) {
-        console.log('✅ PASSED: Successfully handled ambiguous match')
+      console.log('✅ PASSED: Successfully handled ambiguous match')
 
-        // Check if multiple matches were reported
-        if (result.includes('matches')) {
-          const matchCount = result.match(/Found (\d+) matches/)?.[1]
-          if (matchCount && parseInt(matchCount) >= testCase.expectedMatches) {
-            console.log(`   ✨ Correctly handled ${matchCount} matches`)
-          }
+      // Check if multiple matches were reported
+      if (result.includes('matches')) {
+        const matchCount = result.match(/Found (\d+) matches/)?.[1]
+        if (matchCount && parseInt(matchCount) >= testCase.expectedMatches) {
+          console.log(`   ✨ Correctly handled ${matchCount} matches`)
         }
-        passedTests++
-      } else {
-        console.log('❌ FAILED: Expected success but got failure')
       }
+      passedTests++
     } catch (error: any) {
-      if (testCase.shouldSucceed) {
-        console.log(`❌ FAILED: Unexpected error: ${error.message}`)
-      } else {
-        console.log(`✅ PASSED: Correctly failed as expected: ${error.message}`)
-        passedTests++
-      }
+      console.log(`❌ FAILED: Unexpected error: ${error.message}`)
     }
   }
 
@@ -256,21 +246,11 @@ const value = 42`,
         new_string: testCase.newString,
       })
 
-      if (testCase.shouldSucceed) {
-        console.log('✅ PASSED: Parity with Cursor maintained')
-        console.log('   Result preview:', result.split('\n')[0])
-        passedTests++
-      } else {
-        console.log('❌ FAILED: Expected success but got failure')
-        console.log('   Unexpected result:', result.substring(0, 100))
-      }
+      console.log('✅ PASSED: Successfully handled whitespace parity')
+      console.log('   Result preview:', result.split('\n')[0])
+      passedTests++
     } catch (error: any) {
-      if (testCase.shouldSucceed) {
-        console.log(`❌ FAILED: Unexpected error: ${error.message}`)
-      } else {
-        console.log(`✅ PASSED: Correctly failed as expected: ${error.message}`)
-        passedTests++
-      }
+      console.log(`❌ FAILED: Unexpected error: ${error.message}`)
     }
   }
 
@@ -290,7 +270,7 @@ const value = 42`,
         new_string: testCase.newString,
       })
 
-      if (testCase.shouldSucceed) {
+      if (!testCase.expectedError) {
         console.log('✅ PASSED: Success as expected')
         console.log('   Result:', result.substring(0, 100))
         passedTests++
@@ -299,7 +279,7 @@ const value = 42`,
         console.log('   Result:', result.substring(0, 100))
       }
     } catch (error: any) {
-      if (testCase.shouldSucceed) {
+      if (!testCase.expectedError) {
         console.log(`❌ FAILED: Unexpected error: ${error.message}`)
       } else if (testCase.expectedError && error.message.includes(testCase.expectedError)) {
         console.log(`✅ PASSED: Correctly failed with expected error: ${error.message}`)

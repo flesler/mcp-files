@@ -127,6 +127,83 @@ if (condition) {
     shouldMatch: false,
     description: 'Array bracket access should be filtered out by negative lookbehind',
   },
+
+  // Additional negative lookahead/lookbehind tests
+  {
+    name: 'Method call on symbol',
+    content: `const result = myFunc.call()
+if (condition) {
+  return true
+}`,
+    symbol: 'myFunc',
+    shouldMatch: false,
+    description: 'Method calls on symbol should be filtered out by negative lookahead (dot after)',
+  },
+
+  {
+    name: 'String ending with symbol (single quote)',
+    content: `const message = 'Function name is myFunc'
+if (condition) {
+  return true
+}`,
+    symbol: 'myFunc',
+    shouldMatch: false,
+    description: 'Symbols at end of single-quoted strings should be filtered out by negative lookahead',
+  },
+
+  {
+    name: 'String ending with symbol (double quote)',
+    content: `const message = "Function name is myFunc"
+if (condition) {
+  return true
+}`,
+    symbol: 'myFunc',
+    shouldMatch: false,
+    description: 'Symbols at end of double-quoted strings should be filtered out by negative lookahead',
+  },
+
+  {
+    name: 'Symbol used as array index',
+    content: `const value = items[myFunc]
+if (condition) {
+  return true
+}`,
+    symbol: 'myFunc',
+    shouldMatch: false,
+    description: 'Symbols used as array indices should be filtered out by negative lookbehind and lookahead',
+  },
+
+  {
+    name: 'Symbol as object property key',
+    content: `const config = {
+  myFunc: 'some value',
+  other: true
+}`,
+    symbol: 'myFunc',
+    shouldMatch: false,
+    description: 'Symbols used as object property keys should be filtered out by negative lookahead (colon after)',
+  },
+
+  {
+    name: 'Symbol as function parameter',
+    content: `function doSomething(myFunc, other) {
+  return 'result'
+}`,
+    symbol: 'myFunc',
+    shouldMatch: false,
+    description: 'Symbols used as function parameters should be filtered out by negative lookbehind (parenthesis before)',
+  },
+
+  {
+    name: 'Symbol in function call parameters',
+    content: `const result = process(first, myFunc)
+if (result) {
+  return true
+}`,
+    symbol: 'myFunc',
+    shouldMatch: false,
+    description: 'Symbols used as function call arguments should be filtered out by negative lookahead (parenthesis after)',
+  },
   {
     name: 'Single line function',
     content: 'function myFunc() { return \'hello\' }',
