@@ -1,9 +1,8 @@
 import type { PackageJson } from 'types-package-json'
 import util from './util.js'
 
-const { default: pkg } = await import(
-  util.resolve('package.json'), { with: { type: 'json' } }
-) as { default: Partial<PackageJson> }
+const pkgPath = util.resolve('package.json', util.REPO)
+const { default: pkg } = await import(pkgPath, { with: { type: 'json' } }) as { default: Partial<PackageJson> }
 
 export default {
   ...pkg,
