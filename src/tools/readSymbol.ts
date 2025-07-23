@@ -4,6 +4,7 @@ import _ from 'lodash'
 import pLimit from 'p-limit'
 import { z } from 'zod'
 import { defineTool } from '../tools.js'
+import util from '../util.js'
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const MAX_CONCURRENCY = 32
@@ -109,6 +110,7 @@ async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerato
   const ignorePatterns = generateIgnorePatterns(patterns)
   const allPatterns = [...patterns, ...ignorePatterns]
   const entries = fg.stream(allPatterns, {
+    cwd: util.CWD,
     onlyFiles: true,
     absolute: true,
     stats: true,
