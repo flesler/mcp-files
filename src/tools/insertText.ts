@@ -2,34 +2,55 @@ import { z } from 'zod'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
 
+const schema = z.object({
+  file_path: z.string().min(1).describe('Path to the file (supports relative and absolute paths)'),
+  from_line: z.number().int().min(1).describe('Starting line number (1-based)'),
+  text: z.string().describe('Text to insert'),
+  to_line: z.number().int().min(1).optional().describe('Ending line number (1-based, inclusive). If omitted, defaults to from_line (insert only)'),
+})
+
+type UpdateTextArgs = Omit<z.infer<typeof schema>, 'file_path'>
+
 const insertText = defineTool({
   id: 'insert_text',
-  schema: z.object({
-    file_path: z.string().min(1).describe('Path to the file (supports relative and absolute paths)'),
-    line_number: z.number().int().min(1).describe('Line number where to insert the text (1-based)'),
-    text: z.string().describe('Text to insert at the specified line'),
-  }),
-  description: 'Insert text at a specific line number in a file. Line numbers are 1-based.',
+  schema,
+  description: 'Insert or replace text at precise line ranges in files. Ideal for direct line-number operations (from code citations like 12:15:file.ts) and large files where context-heavy editing is inefficient. Complements edit_file for surgical precision.',
   isReadOnly: false,
-  isEnabled: false,
-  fromArgs: ([filePath = '', lineNumber = '', text = '']) => ({
-    file_path: filePath,
-    line_number: parseInt(lineNumber, 10),
-    text,
+  fromArgs: ([filePath = '', fromLine = '', text = '', toLine = '']) => ({
+    file_path: filePath, from_line: parseInt(fromLine, 10), text, to_line: toLine ? parseInt(toLine, 10) : undefined,
   }),
   handler: (args) => {
-    const { file_path: filePath, line_number: lineNumber, text } = args
+    const { file_path: filePath, ...updateArgs } = args
     const fullPath = util.resolve(filePath)
     const content = util.readFile(fullPath)
-    const lines = content.split('\n')
-    if (lineNumber > lines.length + 1) {
-      throw new Error(`Line number ${lineNumber} is beyond file length (${lines.length} lines). Maximum allowed: ${lines.length + 1}`)
-    }
-    lines.splice(lineNumber - 1, 0, text)
-    const newContent = lines.join('\n')
+    const newContent = updateText(content, updateArgs)
     util.writeFile(fullPath, newContent)
-    return `Successfully inserted text at line ${lineNumber} in ${filePath}`
+    const newLines = updateArgs.text.split('\n')
+    if (updateArgs.to_line) {
+      return `Successfully replaced lines ${updateArgs.from_line}-${updateArgs.to_line} with ${newLines.length} line(s) in ${filePath}`
+    } else {
+      return `Successfully inserted ${newLines.length} line(s) at line ${updateArgs.from_line} in ${filePath}`
+    }
   },
 })
 
 export default insertText
+
+export function updateText(content: string, args: UpdateTextArgs): string {
+  const { from_line: fromLine, text, to_line: toLine } = args
+  const endLine = toLine ?? fromLine
+  if (endLine < fromLine) {
+    throw new Error(`Invalid line range: to_line (${endLine}) cannot be less than from_line (${fromLine})`)
+  }
+  const lines = content === '' ? [] : content.split('\n')
+  if (fromLine > lines.length + 1) {
+    throw new Error(`from_line ${fromLine} is beyond file length (${lines.length} lines). Maximum allowed: ${lines.length + 1}`)
+  }
+  if (toLine && endLine > lines.length) {
+    throw new Error(`to_line ${endLine} is beyond file length (${lines.length} lines). Maximum allowed: ${lines.length}`)
+  }
+  const linesToRemove = toLine ? (endLine - fromLine + 1) : 0
+  const newLines = text.split('\n')
+  lines.splice(fromLine - 1, linesToRemove, ...newLines)
+  return lines.join('\n')
+}

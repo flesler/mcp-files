@@ -23,7 +23,7 @@ CLI Usage:
   ${cmd} read_symbol <symbol> <file1> [file2...]      # Find code blocks by symbol name
   ${cmd} import_symbol <module_path> [property]       # Inspect modules and imports  
   ${cmd} search_replace <file> <old_text> <new_text>    # Search and replace with whitespace handling
-  ${cmd} insert_text <file> <line_number> <text>      # Insert text at specific line number (1-based)
+  ${cmd} insert_text <file> <from_line> <text> [to_line] # Insert or replace text at line range (1-based)
   ${cmd} os_notification <message> [title]            # Send OS notifications (title defaults to current directory)
   ${cmd} utils_debug                                  # Get debug information
 
@@ -31,7 +31,8 @@ Examples:
   ${cmd} read_symbol "ToolConfig" src/types.ts
   ${cmd} import_symbol lodash get
   ${cmd} search_replace src/app.ts "old code" "new code"
-  ${cmd} insert_text src/app.ts 10 "console.log('debug')"
+  ${cmd} insert_text src/app.ts 10 "console.log('debug')"     # Insert at line 10
+  ${cmd} insert_text src/app.ts 10 "new code" 12          # Replace lines 10-12
   ${cmd} os_notification "Build complete"
   ${cmd} utils_debug
 `)

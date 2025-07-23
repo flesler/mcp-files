@@ -111,8 +111,8 @@ Add to your MCP client config:
 |------|-------------|------------|
 | `read_symbol` | Find and extract code blocks by symbol name from files | `symbol`, `file_paths[]` |
 | `import_symbol` | Import and inspect JavaScript/TypeScript modules and their properties | `module_path`, `property?` |
-| `search_replace` | Search and replace text in files with flexible whitespace matching | `file_path`, `old_string`, `new_string` |
-| `insert_text` | Insert text at a specific line number in a file (1-based) | `file_path`, `line_number`, `text` |
+| `search_replace` | Search and replace with intelligent whitespace handling and automation-friendly multiple match resolution | `file_path`, `old_string`, `new_string` |
+| `insert_text` | Insert/replace text at precise line ranges. Perfect for direct line operations from code citations (12:15:file.ts) and surgical edits in large files | `file_path`, `from_line`, `text`, `to_line` (optional) |
 | `os_notification` | Send OS notifications using native notification systems | `message`, `title?` |
 
 ## 🎛️ Environment Variables

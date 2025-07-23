@@ -13,7 +13,7 @@ const searchReplace = defineTool({
     old_string: z.string().min(1).describe('Exact text to replace (must be unique in file)'),
     new_string: z.string().describe('Replacement text'),
   }),
-  description: 'Search and replace text in files with improved whitespace handling and clear error messages.',
+  description: 'Search and replace with intelligent whitespace handling and automation-friendly multiple match resolution. Tries exact match first, falls back to flexible whitespace matching.',
   isReadOnly: false,
   fromArgs: ([filePath = '', oldString = '', newString = '']) => ({
     file_path: filePath,
