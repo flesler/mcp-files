@@ -9,12 +9,12 @@ import util from '../util.js'
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024
 const MAX_CONCURRENCY = 32
-const MAX_FILE_COUNT = 100
+const MAX_FILE_COUNT = 2000
 const MAX_MATCHES = 20
 const DEFAULT_MAX_RESULTS = 5
 const DEFAULT_EXTENSIONS = ['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'json', 'json5', 'java', 'cs', 'cpp', 'c', 'h', 'hpp', 'cc', 'go', 'rs', 'php', 'swift', 'scss', 'css', 'less', 'graphql', 'gql', 'prisma', 'proto', 'd.ts']
-const IGNORED_DIRECTORIES = ['node_modules', 'dist', 'build', 'out', '.git', 'test', 'tests']
-const IGNORED_FILES = ['package-lock.json', '*.test.*', '*.spec.*']
+const IGNORED_DIRECTORIES = ['node_modules', 'dist', 'build', 'out', '.git', '**/test', '**/tests', '**/examples', '**/examples/**']
+const IGNORED_FILES = ['package-lock.json', '*.test.*', '*.spec.*', '_*']
 
 const BONUS_KEYWORDS = /\b(class|interface|type|function|enum|namespace|module|model|declare|abstract|const|extends|implements)\b/gi
 
@@ -29,7 +29,10 @@ const readSymbol = defineTool({
   isReadOnly: true,
   fromArgs: ([symbol, ...paths]) => ({ symbol, file_paths: paths.length ? paths : undefined }),
   handler: async (args) => {
-    const { symbol, file_paths: filePaths = ['.'], limit = DEFAULT_MAX_RESULTS } = args
+    const { symbol, file_paths: filePaths = [], limit = DEFAULT_MAX_RESULTS } = args
+    if (!filePaths.length) {
+      filePaths.push('.')
+    }
     const patterns = filePaths.map(mapPattern)
     const results: Block[] = []
     let totalFound = 0
@@ -110,9 +113,7 @@ async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerato
 
   try {
     for await (const entry of entries) {
-      if (++filesProcessed === MAX_FILE_COUNT) {
-        shouldStop = true
-      }
+      if (++filesProcessed === MAX_FILE_COUNT) break
       if (shouldStop) break
       if (entry.stats && entry.stats.size > MAX_FILE_SIZE) continue
 
@@ -156,7 +157,7 @@ export function findBlocks(content: string, symbol: string, path: string): Block
     const startLine = lines.length
     const matchLines = match[0].split('\n')
     const endLine = startLine + matchLines.length - 1
-    const score = scoreSymbol(match[0])
+    const score = scoreSymbol(match[0], path)
     results.push({ text: match[0], startLine, endLine, path, score })
   }
   return results
@@ -168,19 +169,24 @@ export function matchSymbol(content: string, symbol: string): string[] {
 }
 
 // AI: NEVER change this regex without user approval
-const createRegex = _.memoize((symbol: string) => new RegExp(`^([ \t]*).*(?<![([.'"])\\b${_.escapeRegExp(symbol)}\\b(?![:.'")\]])(.*)(\\n\\1)?{(?:\\n\\1\\s+.*)*[^}]*}`, 'mg'))
+const createRegex = _.memoize((symbol: string) => new RegExp(`
+  ^(?:/[/*].*\n)*
+  ([ \t]*).*(?<![([.'"])\\b
+  ${_.escapeRegExp(symbol)}
+  \\b(?![:.'")\]])(.*)(\\n\\1)?{
+  (?:\\n\\1\\s+.*)*[^}]*
+  }`.replace(/\n */g, '').trim(), 'mg'))
 
-function scoreSymbol(text: string): number {
+function scoreSymbol(text: string, path: string): number {
   let score = 0
   const lines = text.split('\n')
-  if (lines.length > 2) {
-    score += lines.length * 2
-  } else {
-    score -= 1e4
-  }
-  score += Math.min(text.length / 50, 10)
+  // Larger blocks are better
+  score += lines.length * 2
   const keywords = lines[0].match(BONUS_KEYWORDS) || []
   score += keywords.length * 1e3
+  // Penalize depth
+  const depth = path.split('/').length
+  score -= depth * 10
   return Math.round(score)
 }
 

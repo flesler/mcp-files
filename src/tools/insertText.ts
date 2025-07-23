@@ -3,10 +3,10 @@ import { defineTool } from '../tools.js'
 import util from '../util.js'
 
 const schema = z.object({
-  file_path: z.string().min(1).describe('Path to the file (supports relative and absolute paths)'),
+  file_path: z.string().min(1).describe('Path to the file'),
   from_line: z.number().int().min(1).describe('Starting line number (1-based)'),
   text: z.string().describe('Text to insert'),
-  to_line: z.number().int().min(1).optional().describe('Ending line number (1-based, inclusive). If omitted, defaults to from_line (insert only)'),
+  to_line: z.number().int().min(1).optional().describe('Replace up to this line number (1-based, inclusive). If omitted only inserts'),
 })
 
 type UpdateTextArgs = Omit<z.infer<typeof schema>, 'file_path'>
@@ -14,7 +14,11 @@ type UpdateTextArgs = Omit<z.infer<typeof schema>, 'file_path'>
 const insertText = defineTool({
   id: 'insert_text',
   schema,
-  description: 'Insert or replace text at precise line ranges in files. Ideal for direct line-number operations (from code citations like 12:15:file.ts) and large files where context-heavy editing is inefficient. Complements edit_file for surgical precision.',
+  description: util.trimLines(`
+    Insert or replace text at precise line ranges in files
+    - Ideal for direct line-number operations (from code citations like 12:15:file.ts) and large files where context-heavy editing is inefficient.
+    - TIP: Combine with read_symbol to edit any symbol anywhere without knowing its file or line range!
+  `),
   isReadOnly: false,
   fromArgs: ([filePath = '', fromLine = '', text = '', toLine = '']) => ({
     file_path: filePath, from_line: parseInt(fromLine, 10), text, to_line: toLine ? parseInt(toLine, 10) : undefined,

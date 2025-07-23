@@ -7,6 +7,21 @@
 
 A comprehensive MCP server providing helpful tools for AI agents like Cursor.
 
+## 📋 Table of Contents
+
+- [🚀 Quick Start](#-quick-start)
+- [🔧 Installation Examples](#-installation-examples)
+- [🛠️ Available Tools](#️-available-tools)
+- [⚡ Surgical Code Editing: Superhuman Precision](#-surgical-code-editing-superhuman-precision)
+- [🎛️ Environment Variables](#️-environment-variables)
+- [🖥️ Server Usage](#️-server-usage)
+- [💻 CLI Usage](#-cli-usage)
+- [🏗️ Architecture](#️-architecture)
+- [🧪 Development](#-development)
+- [🛠️ Troubleshooting](#️-troubleshooting)
+- [📝 License](#-license)
+- [🔗 Links](#-links)
+
 ## 🚀 Quick Start
 
 ### Option 1: NPX (Recommended)
@@ -112,8 +127,65 @@ Add to your MCP client config:
 | `read_symbol` | Find and extract code blocks by symbol name from files | `symbol`, `file_paths[]?`, `limit?` |
 | `import_symbol` | Import and inspect JavaScript/TypeScript modules and their properties | `module_path`, `property?` |
 | `search_replace` | Search and replace with intelligent whitespace handling and automation-friendly multiple match resolution | `file_path`, `old_string`, `new_string` |
-| `insert_text` | Insert/replace text at precise line ranges. Perfect for direct line operations from code citations (12:15:file.ts) and surgical edits in large files | `file_path`, `from_line`, `text`, `to_line` (optional) |
+| `insert_text` | Insert/replace text at precise line ranges. Perfect for direct line operations from code citations (12:15:file.ts) and surgical edits in large files | `file_path`, `from_line`, `text`, `to_line` |
 | `os_notification` | Send OS notifications using native notification systems | `message`, `title?` |
+
+## ⚡ **Surgical Code Editing: Superhuman Precision**
+
+The combination of `read_symbol` + `insert_text` unlocks **revolutionary code editing capabilities** that transform how AI agents work with codebases.
+
+### 🎯 **The Power Combo**
+
+**1. Symbol Discovery (`read_symbol`)** - Find ANY symbol ANYWHERE in your codebase:
+```typescript
+// Find function/class/interface anywhere in repo
+read_symbol("generateApiKey") 
+// → Returns: exact location (lines 45-52 in src/auth/tokens.ts)
+```
+
+**2. Surgical Editing (`insert_text`)** - Make precise modifications using exact line ranges:
+```typescript
+// Replace specific lines with surgical precision
+insert_text(file: "src/auth/tokens.ts", from_line: 45, to_line: 52, text: "improved implementation")
+
+// Insert new code without disruption  
+insert_text(file: "src/auth/tokens.ts", from_line: 45, text: "// Added security enhancement")
+```
+
+### 🚀 **Superpowers Unlocked**
+
+**🔍 Cross-Codebase Intelligence**
+- Find any symbol across entire repositories instantly
+- No manual searching through files and folders
+- Perfect accuracy even in massive codebases
+
+**✂️ Precision Surgery**
+- Edit exact functions, classes, or code blocks
+- Replace implementations without affecting surrounding code
+- Insert enhancements at perfect locations
+
+**🎛️ Zero-Error Refactoring**
+- Update function signatures everywhere they exist
+- Modify APIs across all files simultaneously
+- Fix bugs with surgical precision across entire codebase
+
+### 💡 **Real-World Magic**
+
+```bash
+# Find and enhance any function
+read_symbol("validateEmail") → lines 23-35 in utils/validation.ts
+insert_text(from_line: 23, to_line: 35, text: "enhanced validation with regex")
+
+# Add documentation to any symbol
+read_symbol("processPayment") → line 87 in payment/processor.ts  
+insert_text(from_line: 87, text: "/** Secure payment processing with fraud detection */")
+
+# Fix bugs anywhere in codebase
+read_symbol("parseUserInput") → lines 156-162 in input/parser.ts
+insert_text(from_line: 156, to_line: 162, text: "sanitized parsing logic")
+```
+
+**This transforms AI from "helpful assistant" to "superhuman code surgeon"** 🦾
 
 ## 🎛️ Environment Variables
 
