@@ -1,11 +1,11 @@
 import { matchSymbol } from '../src/tools/readSymbol.js'
+import util from '../src/util.js'
 
 interface TestCase {
   name: string
   content: string
   symbol: string
   shouldMatch: boolean
-  description: string
 }
 
 const testCases: TestCase[] = [
@@ -17,7 +17,6 @@ const testCases: TestCase[] = [
 }`,
     symbol: 'myFunc',
     shouldMatch: true,
-    description: 'Basic function definition',
   },
   {
     name: 'Arrow function assignment',
@@ -26,7 +25,6 @@ const testCases: TestCase[] = [
 }`,
     symbol: 'myFunc',
     shouldMatch: true,
-    description: 'Arrow function assigned to const',
   },
   {
     name: 'Class definition',
@@ -35,7 +33,6 @@ const testCases: TestCase[] = [
 }`,
     symbol: 'MyClass',
     shouldMatch: true,
-    description: 'Class definition',
   },
   {
     name: 'Interface definition',
@@ -44,7 +41,6 @@ const testCases: TestCase[] = [
 }`,
     symbol: 'MyInterface',
     shouldMatch: true,
-    description: 'TypeScript interface',
   },
   {
     name: 'Type definition',
@@ -53,7 +49,6 @@ const testCases: TestCase[] = [
 }`,
     symbol: 'MyType',
     shouldMatch: true,
-    description: 'TypeScript type alias',
   },
   {
     name: 'Object method',
@@ -64,7 +59,6 @@ const testCases: TestCase[] = [
 }`,
     symbol: 'myMethod',
     shouldMatch: true,
-    description: 'Object method definition',
   },
   {
     name: 'Enum definition',
@@ -73,7 +67,6 @@ const testCases: TestCase[] = [
 }`,
     symbol: 'MyEnum',
     shouldMatch: true,
-    description: 'TypeScript enum',
   },
 
   // 🌟 WILDCARD TESTS
@@ -84,7 +77,6 @@ const testCases: TestCase[] = [
 }`,
     symbol: 'my*',
     shouldMatch: true,
-    description: 'Wildcard should match function starting with my',
   },
   {
     name: 'Wildcard class match',
@@ -93,7 +85,6 @@ const testCases: TestCase[] = [
 }`,
     symbol: 'User*',
     shouldMatch: true,
-    description: 'Wildcard should match class starting with User',
   },
   {
     name: 'Wildcard interface match',
@@ -102,7 +93,6 @@ const testCases: TestCase[] = [
 }`,
     symbol: 'Api*',
     shouldMatch: true,
-    description: 'Wildcard should match interface starting with Api',
   },
   {
     name: 'Wildcard type match',
@@ -111,7 +101,6 @@ const testCases: TestCase[] = [
 }`,
     symbol: 'Config*',
     shouldMatch: true,
-    description: 'Wildcard should match type starting with Config',
   },
   {
     name: 'Multiple wildcard match',
@@ -124,7 +113,6 @@ function handleAdminRequest() {
 }`,
     symbol: 'handle*',
     shouldMatch: true,
-    description: 'Wildcard should match multiple functions with same prefix',
   },
   {
     name: 'Prefix wildcard match',
@@ -133,7 +121,6 @@ function handleAdminRequest() {
 }`,
     symbol: '*Data',
     shouldMatch: true,
-    description: 'Wildcard should match function ending with Data',
   },
   {
     name: 'Middle wildcard match',
@@ -142,7 +129,6 @@ function handleAdminRequest() {
 }`,
     symbol: 'get*Data',
     shouldMatch: true,
-    description: 'Wildcard should match function with pattern in middle',
   },
   {
     name: 'Multiple wildcards match',
@@ -151,7 +137,6 @@ function handleAdminRequest() {
 }`,
     symbol: '*Get*Data',
     shouldMatch: true,
-    description: 'Multiple wildcards should match complex patterns',
   },
   {
     name: 'Single wildcard match all',
@@ -160,7 +145,6 @@ function handleAdminRequest() {
 }`,
     symbol: '*',
     shouldMatch: true,
-    description: 'Single wildcard should match any symbol',
   },
   {
     name: 'Wildcard no match',
@@ -173,7 +157,6 @@ function processInfo() {
 }`,
     symbol: 'handle*',
     shouldMatch: false,
-    description: 'Wildcard should not match when pattern not found',
   },
 
   // ❌ NEGATIVE CASES - Should NOT match
@@ -185,7 +168,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Property access should be filtered out by negative lookahead',
   },
   {
     name: 'Bracket notation access',
@@ -195,7 +177,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Bracket notation should be filtered out by negative lookbehind',
   },
   {
     name: 'String literal single quote',
@@ -205,7 +186,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'String literals should be filtered out by negative lookahead',
   },
   {
     name: 'String literal double quote',
@@ -215,7 +195,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'String literals should be filtered out by negative lookahead',
   },
   {
     name: 'Array bracket access',
@@ -225,7 +204,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Array bracket access should be filtered out by negative lookbehind',
   },
 
   // Additional negative lookahead/lookbehind tests
@@ -237,7 +215,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Method calls on symbol should be filtered out by negative lookahead (dot after)',
   },
 
   {
@@ -248,7 +225,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Symbols at end of single-quoted strings should be filtered out by negative lookahead',
   },
 
   {
@@ -259,7 +235,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Symbols at end of double-quoted strings should be filtered out by negative lookahead',
   },
 
   {
@@ -270,7 +245,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Symbols used as array indices should be filtered out by negative lookbehind and lookahead',
   },
 
   {
@@ -281,7 +255,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Object property keys should not match (no brace block follows)',
   },
 
   {
@@ -291,7 +264,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Symbols used as function parameters should be filtered out by negative lookbehind (parenthesis before)',
   },
 
   {
@@ -302,14 +274,12 @@ if (result) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Symbols used as function call arguments should be filtered out by negative lookahead (parenthesis after)',
   },
   {
     name: 'Single line function',
     content: 'function myFunc() { return \'hello\' }',
     symbol: 'myFunc',
-    shouldMatch: true,
-    description: 'Single line functions match but get negative scores (filtered in final results)',
+    shouldMatch: false,
   },
   {
     name: 'Function call',
@@ -319,7 +289,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Function calls without definitions should not match',
   },
   {
     name: 'Variable assignment',
@@ -329,7 +298,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Simple variable assignments should not match',
   },
   {
     name: 'Import statement',
@@ -339,7 +307,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Import statements should not match',
   },
 
   // 🎯 EDGE CASES
@@ -350,7 +317,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Word boundary should prevent partial matches',
   },
   {
     name: 'Symbol at start of identifier',
@@ -359,7 +325,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: false,
-    description: 'Word boundary should prevent partial matches',
   },
   {
     name: 'Nested object method',
@@ -372,7 +337,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: true,
-    description: 'Nested object methods should match',
   },
   {
     name: 'Function with ternary operator',
@@ -381,7 +345,6 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: true,
-    description: 'Functions with ternary operators should match (colon in body is OK)',
   },
   {
     name: 'Function with type annotation',
@@ -390,14 +353,24 @@ if (condition) {
 }`,
     symbol: 'myFunc',
     shouldMatch: true,
-    description: 'TypeScript functions with return type annotations should match',
   },
   {
     name: 'Windows CRLF line endings',
     content: '// Comment with CRLF\r\nfunction myFunc() {\r\n  var x = 1;\r\n  return x;\r\n}',
     symbol: 'myFunc',
     shouldMatch: true,
-    description: 'Functions with Windows CRLF line endings should match (test for \\r\\n handling)',
+  },
+  {
+    name: 'Not hang forever on //////, used to happen',
+    content: `\n${'/'.repeat(100)}\n\nfunction myFunc(){\n  var x = 1;\n  return x;\n}\n`,
+    symbol: 'myFunc',
+    shouldMatch: true,
+  },
+  {
+    name: 'Symbol deep into the line',
+    content: `\n${'a'.repeat(201)} function myFunc(){\n  var x = 1;\n  return x;\n}\n`,
+    symbol: 'myFunc',
+    shouldMatch: false,
   },
 ]
 
@@ -419,9 +392,8 @@ function runTests() {
         console.log(`❌ ${testCase.name}`)
         console.log(`   Expected: ${testCase.shouldMatch ? 'match' : 'no match'}`)
         console.log(`   Got: ${hasMatch ? 'match' : 'no match'}`)
-        console.log(`   Description: ${testCase.description}`)
         if (hasMatch && matches[0]) {
-          console.log(`   Matched: "${matches[0].replace(/\n/g, '\\n')}"`)
+          console.log(`   Matched: "${util.truncate(matches[0].replace(/\n/g, '\\n'), 100)}"`)
         }
         console.log()
         failed++

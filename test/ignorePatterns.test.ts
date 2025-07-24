@@ -7,7 +7,7 @@ interface TestCase {
 }
 
 const NEGATIVE_FILES = '!**/{*.test.*,*.spec.*,_*,*.min.*}'
-const DEFAULT_IGNORED_DIRS = '{node_modules,dist,build,out,.git,**/test,**/tests,**/examples,**/examples/**,**/bin/**}'
+const DEFAULT_IGNORED_DIRS = '{node_modules,dist,build,out,.git,**/test,**/tests,**/examples,**/bin,**/runtime}'
 
 const testCases: TestCase[] = [
   {

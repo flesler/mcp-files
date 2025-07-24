@@ -7,13 +7,20 @@ import env from '../env.js'
 import { defineTool } from '../tools.js'
 import util from '../util.js'
 
-const MAX_FILE_SIZE = 0.5 * 1024 * 1024 // 500KB
 const MAX_CONCURRENCY = 32
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+// Max number of files to scan
 const MAX_FILE_COUNT = 2000
+// Max length of a block to consider
+const MAX_BLOCK_LENGTH = 15e3
+// Max distance from the beginning of the line to the symbol
+const MAX_SYMBOL_OFFSET = 200
+// Abort once we have this many matches
 const MAX_MATCHES = 20
 const DEFAULT_MAX_RESULTS = 5
 const DEFAULT_EXTENSIONS = ['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'cts', 'java', 'cs', 'cpp', 'c', 'h', 'hpp', 'cc', 'go', 'rs', 'php', 'swift', 'scss', 'css', 'less', 'graphql', 'gql', 'prisma', 'proto', 'd.ts']
-const IGNORED_DIRECTORIES = ['node_modules', 'dist', 'build', 'out', '.git', '**/test', '**/tests', '**/examples', '**/examples/**', '**/bin/**']
+const IGNORED_DIRECTORIES = ['node_modules', 'dist', 'build', 'out', '.git']
+const IGNORED_DEEP_DIRECTORIES = ['test', 'tests', 'examples', 'bin', 'runtime']
 const IGNORED_FILES = ['*.test.*', '*.spec.*', '_*', '*.min.*']
 
 const BONUS_KEYWORDS = /\b(class|interface|type|function|enum|namespace|module|model|declare|abstract|const|extends|implements)\b/gi
@@ -95,7 +102,9 @@ export function mapPattern(pattern: string) {
 }
 
 export function generateIgnorePatterns(patterns: string[]): string[] {
-  const dirs = IGNORED_DIRECTORIES.filter(dir => !patterns.some(pattern => pattern.includes(dir)))
+  const dirs = IGNORED_DIRECTORIES
+    .concat(IGNORED_DEEP_DIRECTORIES.map(dir => `**/${dir}`))
+    .filter(dir => !patterns.some(pattern => pattern.includes(dir)))
   const ignore = [`!**/{${IGNORED_FILES.join(',')}}`]
   if (dirs.length) {
     ignore.push(`!{${dirs.join(',')}}/**`)
@@ -109,7 +118,7 @@ async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerato
   const ignorePatterns = generateIgnorePatterns(patterns)
   const allPatterns = [...patterns, ...ignorePatterns]
   const entries = fg.stream(allPatterns, {
-    cwd: util.CWD, onlyFiles: true, absolute: true, stats: true, suppressErrors: true, deep: 4,
+    cwd: util.CWD, onlyFiles: true, absolute: false, stats: true, suppressErrors: true, deep: 4,
   }) as AsyncIterable<fg.Entry>
   const pendingTasks = new Set<Promise<Block[]>>()
   let filesProcessed = 0
@@ -118,15 +127,15 @@ async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerato
     for await (const entry of entries) {
       if (++filesProcessed === MAX_FILE_COUNT) break
       if (shouldStop) break
-      console.log(filesProcessed, entry.path, entry.stats?.size)
       if (entry.stats && entry.stats.size > MAX_FILE_SIZE) continue
 
+      const fileIndex = filesProcessed
       const task = limit(async () => {
         if (shouldStop) return []
         try {
-          const content = await fs.readFile(entry.path, 'utf8')
+          const content = await fs.readFile(util.resolve(entry.path), 'utf8')
           if (shouldStop) return []
-          return findBlocks(content, symbol, entry.path)
+          return findBlocks(content, symbol, entry.path, fileIndex)
         } catch {
           return []
         }
@@ -152,18 +161,25 @@ export interface Block {
   path: string
   score: number
   index: number
+  fileIndex: number
 }
 
-export function findBlocks(content: string, symbol: string, path: string): Block[] {
+export function findBlocks(content: string, symbol: string, path: string, fileIndex: number): Block[] {
   const results: Block[] = []
-  console.log('FINDING', path)
+  if (!content.includes('\n')) {
+    // Quick escape for large minified files
+    return results
+  }
   for (const match of matchSymbol(content, symbol)) {
     const lines = content.substring(0, match.index).split('\n')
     const startLine = lines.length
-    const matchLines = match[0].split('\n')
-    const endLine = startLine + matchLines.length - 1
-    const score = scoreSymbol(match[0], path)
-    results.push({ text: match[0], startLine, endLine, path, score, index: match.index })
+    const [text] = match
+    if (text.length > MAX_BLOCK_LENGTH) {
+      continue
+    }
+    const endLine = startLine + text.split('\n').length - 1
+    const score = scoreSymbol(text, path)
+    results.push({ text, startLine, endLine, path, score, index: match.index, fileIndex })
   }
   return results
 }
@@ -180,13 +196,13 @@ const createRegex = _.memoize((symbol: string) => new RegExp((
   // Comment line(s)
   '^(?:\\s*/[/*][^\n]*\n)*' +
   // Initial line and look behind for symbol
-  '([ \t]*).*(?<![([.\'"])\\b' +
+  `([ \t]*).{0,${MAX_SYMBOL_OFFSET}}(?<![([.\'"])\\b` +
   // Symbol
   _.escapeRegExp(symbol).replace(/\\\*/g, '\\w*') +
   // Look ahead until brace
   '\\b(?![.\'")\]]).*\\s*\\{' +
   // Indented lines
-  '(?:\\n\\1\\s+.*)*' +
+  '(?:\r?\n\\1\\s+.*)+' +
   // Until closing brace
   '[^}]*\\}'
 ), 'mg'))
@@ -210,8 +226,10 @@ function scoreSymbol(text: string, path: string): number {
 
 function formatResult(block: Block): string {
   let header = `${block.startLine}:${block.endLine}:${block.path}`
-  if (env.DEBUG) {
-    header += ` (${block.score})`
+  if (env.CLI && env.DEBUG) {
+    const { length } = block.text
+    const elapsed = Math.round(process.uptime() * 1000)
+    header += ` | Chars: ${length} | Index: ${block.index}-${block.index + length} | File: #${block.fileIndex} | Score: ${block.score} | Time: ${elapsed}ms`
   }
   return `=== ${header} ===\n${block.text}`
 }

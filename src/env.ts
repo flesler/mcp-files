@@ -4,6 +4,8 @@ const env = {
   TRANSPORT: readString('TRANSPORT', 'stdio'),
   DEBUG: readBoolean('DEBUG', false),
   OVERRIDE_S_R: readBoolean('OVERRIDE_S_R', false),
+  // Set by cli.ts
+  CLI: false,
 }
 
 function readString(key: string, def: any): string {

@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import { ZodError } from 'zod'
+import env from './env.js'
 import logger from './logger.js'
 import tools from './tools.js'
 import { Tool } from './types.js'
@@ -13,6 +14,7 @@ const cli = {
     if (!tool) {
       throw new Error(`Unknown command: ${inputCmd}`)
     }
+    env.CLI = true
     const res = await this.runTool(tool, tool.fromArgs(args))
     console.log(res)
   },

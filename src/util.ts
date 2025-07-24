@@ -70,6 +70,10 @@ const util = {
     return Math.max(min, Math.min(value, max))
   },
 
+  truncate(str: string, maxLength: number, ellipsis = '...'): string {
+    return str.length > maxLength ? str.slice(0, maxLength) + ellipsis : str
+  },
+
   execSync,
 }
 

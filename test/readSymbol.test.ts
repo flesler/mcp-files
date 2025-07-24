@@ -24,21 +24,15 @@ export const myFunction = () => {
     },
   },
 
-  // One-liner functions
   {
     name: 'One-liner function',
     content: 'function quickFunc() { return 42 }',
     symbol: 'quickFunc',
-    expectedCount: 1,
-    expectedFirst: {
-      startLine: 1,
-      endLine: 1,
-    },
+    expectedCount: 0, // No newlines = quick escape
   },
 
-  // Multiple functions - test both are found, first one returned first (same scores)
   {
-    name: 'Multiple functions - both found',
+    name: 'Multiple functions - only multi-line found',
     content: `
 function func1() { return 1 }
 function func2() {
@@ -46,14 +40,9 @@ function func2() {
 }
 function func1() { return 'another' }`,
     symbol: 'func1',
-    expectedCount: 2,
-    expectedFirst: {
-      startLine: 2, // First occurrence is returned first when scores are equal
-      endLine: 2,
-    },
+    expectedCount: 0, // One-liners don't have required indented content
   },
 
-  // Indented function
   {
     name: 'Indented function',
     content: `
@@ -70,7 +59,6 @@ class MyClass {
     },
   },
 
-  // TypeScript interface
   {
     name: 'TypeScript interface',
     content: `
@@ -86,7 +74,6 @@ interface MyInterface {
     },
   },
 
-  // Class definition
   {
     name: 'Class definition',
     content: `
@@ -105,7 +92,6 @@ export class MyClass {
     },
   },
 
-  // Arrow functions - only matches ones with braces
   {
     name: 'Arrow functions with braces',
     content: `
@@ -121,7 +107,6 @@ const arrowFunc2 = () => console.log('inline')`,
     },
   },
 
-  // Object methods
   {
     name: 'Object methods',
     content: `
@@ -138,7 +123,6 @@ const obj = {
     },
   },
 
-  // TypeScript types
   {
     name: 'TypeScript type alias',
     content: `
@@ -154,7 +138,6 @@ type MyType = {
     },
   },
 
-  // Enums
   {
     name: 'TypeScript enum',
     content: `
@@ -170,7 +153,6 @@ enum Status {
     },
   },
 
-  // Namespace
   {
     name: 'TypeScript namespace',
     content: `
@@ -187,7 +169,6 @@ namespace Utils {
     },
   },
 
-  // Complex class with constructor
   {
     name: 'Class with constructor and methods',
     content: `
@@ -209,7 +190,6 @@ class ComplexClass {
     },
   },
 
-  // Module declaration
   {
     name: 'Module declaration',
     content: `
@@ -220,7 +200,6 @@ declare module 'my-module' {
     expectedCount: 0, // Symbol is quoted, so we don't match it (avoids false positives)
   },
 
-  // JSON-like structure
   {
     name: 'JSON configuration object',
     content: `
@@ -237,7 +216,6 @@ const config = {
     },
   },
 
-  // GraphQL schema
   {
     name: 'GraphQL schema',
     content: `
@@ -254,7 +232,6 @@ type User {
     },
   },
 
-  // Word boundary test - should not match partial words
   {
     name: 'Word boundary test',
     content: `
@@ -262,14 +239,9 @@ function myFunction() { return 1 }
 function myFunctionExtended() { return 2 }
 const myFunctionVar = 'test'`,
     symbol: 'myFunction',
-    expectedCount: 1, // Should only match exact 'myFunction', not 'myFunctionExtended'
-    expectedFirst: {
-      startLine: 2,
-      endLine: 2,
-    },
+    expectedCount: 0, // One-liner doesn't have required indented content
   },
 
-  // String literals with braces (should still match, overmatch is OK)
   {
     name: 'String literals with braces',
     content: `
@@ -289,7 +261,6 @@ function realFunc() {
     },
   },
 
-  // No matches found
   {
     name: 'Symbol not found',
     content: `
@@ -300,7 +271,6 @@ function otherFunction() {
     expectedCount: 0,
   },
 
-  // Nested functions (known limitation - might find both)
   {
     name: 'Nested functions',
     content: `
@@ -318,7 +288,6 @@ function outer() {
     },
   },
 
-  // Generic functions with angle brackets
   {
     name: 'Generic function',
     content: `
@@ -333,7 +302,6 @@ function genericFunc<T>() {
     },
   },
 
-  // Async/await functions
   {
     name: 'Async function',
     content: `
@@ -348,7 +316,6 @@ async function asyncFunc() {
     },
   },
 
-  // Function expressions with names
   {
     name: 'Named function expression',
     content: `
@@ -363,7 +330,6 @@ const myVar = function namedFunc() {
     },
   },
 
-  // Symbol in comments (should still match - overmatch is acceptable)
   {
     name: 'Symbol in comments',
     content: `
@@ -382,7 +348,6 @@ function mySymbol() {
     },
   },
 
-  // Very long symbol name
   {
     name: 'Long symbol name',
     content: `
@@ -397,7 +362,6 @@ function thisIsAVeryLongFunctionNameThatSomeoneActuallyMightUse() {
     },
   },
 
-  // Symbol with numbers and underscores
   {
     name: 'Symbol with numbers and underscores',
     content: `
@@ -412,17 +376,24 @@ function func_123_test() {
     },
   },
 
-  // Empty braces
   {
     name: 'Function with empty body',
-    content: `
-function emptyFunc() {}`,
+    content: 'function emptyFunc() {}', // Removed newlines - will trigger quick escape
     symbol: 'emptyFunc',
-    expectedCount: 1,
-    expectedFirst: {
-      startLine: 2,
-      endLine: 2,
-    },
+    expectedCount: 0, // No newlines = quick escape
+  },
+
+  {
+    name: 'Minified file without newlines',
+    content: 'function myFunc(){return 42;}var x=123;function anotherFunc(){console.log("test");}',
+    symbol: 'myFunc',
+    expectedCount: 0, // Should return early due to no newlines
+  },
+  {
+    name: 'Huge block',
+    content: ` function myFunc(){\n  var x = 1;\n  ${'a'.repeat(16e3)};\n}\n`,
+    symbol: 'myFunc',
+    expectedCount: 0,
   },
 ]
 
@@ -438,7 +409,7 @@ for (let i = 0; i < testCases.length; i++) {
   try {
     console.log(`🔄 Test ${testNum}/${testCases.length}: ${testCase.name}`)
 
-    const blocks = findBlocks(testCase.content, testCase.symbol, 'test.ts')
+    const blocks = findBlocks(testCase.content, testCase.symbol, 'test.ts', 0)
 
     // Check expected count
     if (blocks.length !== testCase.expectedCount) {
