@@ -1,6 +1,6 @@
 {
   "name": "mcp-files",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "type": "module",
   "description": "Enables agents to quickly find and edit code in a codebase with surgical precision. Find symbols, edit them everywhere",
   "main": "dist/index.js",

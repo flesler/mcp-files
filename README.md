@@ -59,16 +59,17 @@ Add this to `~/.cursor/mcp.json` for Cursor, `~/.config/claude_desktop_config.js
 
 ### Option 3: HTTP transport
 
+First run the server:
+```bash
+TRANSPORT=http PORT=3000 npx mcp-files
+```
+Then:
 ```json
 {
   "mcpServers": {
     "mcp-files": {
-      "command": "npx",
-      "args": ["-y", "mcp-files"],
-      "env": {
-        "TRANSPORT": "http",
-        "PORT": "3000"
-      }
+      "type": "streamableHttp",
+      "url": "http://localhost:3000/mcp"
     }
   }
 }
