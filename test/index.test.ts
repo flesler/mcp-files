@@ -5,11 +5,15 @@ if (process.env.SILENT === 'true') {
   console.log = () => {}
 }
 
+const filter = process.argv[2]
+
 console.log('🚀 Running all mcp-files tests...\n')
 
 async function runAllTests() {
   const testModules = fs.readdirSync(util.resolve('test', util.REPO))
-    .filter((file: string) => file.endsWith('.test.ts') && file !== 'index.test.ts')
+    .filter(file => (
+      file.endsWith('.test.ts') && file !== 'index.test.ts' && (!filter || file.includes(filter))
+    ))
     .sort()
 
   console.log(`Running ${testModules.length} test modules in sequence...\n`)

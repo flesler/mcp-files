@@ -34,7 +34,7 @@ async function test() {
         module_path: 'path',
         property: 'nonExistentProperty',
       })
-      console.log('❌ Non-existent property test failed - should have thrown')
+      console.error('❌ Non-existent property test failed - should have thrown')
     } catch (err: any) {
       console.log('✅ Non-existent property test passed - correctly threw error')
       console.log('Error:', err.message.includes('not found'))
@@ -45,7 +45,7 @@ async function test() {
       await importSymbolTool.handler({
         module_path: 'this-module-definitely-does-not-exist-12345',
       })
-      console.log('❌ Non-existent module test failed - should have thrown')
+      console.error('❌ Non-existent module test failed - should have thrown')
     } catch (err: any) {
       console.log('✅ Non-existent module test passed - correctly threw error')
       console.log('Error type:', err.message.includes('Cannot find module') || err.message.includes('not found'))

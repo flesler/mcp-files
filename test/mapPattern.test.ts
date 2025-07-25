@@ -7,7 +7,7 @@ interface TestCase {
 }
 
 // Constants for easier maintenance
-const DEFAULT_EXTENSIONS = '{ts,tsx,js,jsx,mjs,cjs,cts,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto,d.ts}'
+const DEFAULT_EXTENSIONS = '{d.ts,ts,tsx,js,jsx,mjs,cjs,cts,java,cs,cpp,c,h,hpp,cc,go,rs,php,swift,scss,css,less,graphql,gql,prisma,proto}'
 
 const testCases: TestCase[] = [
   // Files with extensions - should pass through unchanged
@@ -325,16 +325,16 @@ function runTests() {
         console.log(`   Output: "${result}"`)
         passed++
       } else {
-        console.log(`❌ FAIL: ${testCase.description}`)
-        console.log(`   Input: "${testCase.input}"`)
-        console.log(`   Expected: "${testCase.expected}"`)
-        console.log(`   Got: "${result}"`)
+        console.error(`❌ FAIL: ${testCase.description}`)
+        console.error(`   Input: "${testCase.input}"`)
+        console.error(`   Expected: "${testCase.expected}"`)
+        console.error(`   Got     : "${result}"`)
         failed++
       }
     } catch (error) {
-      console.log(`💥 ERROR: ${testCase.description}`)
-      console.log(`   Input: "${testCase.input}"`)
-      console.log(`   Error: ${error}`)
+      console.error(`💥 ERROR: ${testCase.description}`)
+      console.error(`   Input: "${testCase.input}"`)
+      console.error(`   Error: ${error}`)
       failed++
     }
     console.log('')
@@ -343,7 +343,7 @@ function runTests() {
   console.log(`🎯 Test Summary: ${passed} passed, ${failed} failed`)
 
   if (failed > 0) {
-    console.log('❌ Some tests failed!')
+    console.error('❌ Some tests failed!')
     process.exit(1)
   } else {
     console.log('🎉 All mapPattern tests passed!')

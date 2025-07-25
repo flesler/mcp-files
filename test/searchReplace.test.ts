@@ -174,7 +174,7 @@ const value = 42`,
       })
 
       if (testCase.shouldThrow) {
-        console.log('❌ FAILED: Expected error but got result')
+        console.error('❌ FAILED: Expected error but got result')
         console.log('   Result:', result.substring(0, 100))
       } else {
         const newContent = fs.readFileSync(tempFile, 'utf8')
@@ -182,7 +182,7 @@ const value = 42`,
           console.log('✅ PASSED: All assertions correct')
           passedTests++
         } else {
-          console.log('❌ FAILED: Content mismatch')
+          console.error('❌ FAILED: Content mismatch')
           console.log('   Expected:', JSON.stringify(testCase.expected))
           console.log('   Actual:', JSON.stringify(newContent))
         }
@@ -275,7 +275,7 @@ const value = 42`,
         console.log('   Result:', result.substring(0, 100))
         passedTests++
       } else {
-        console.log('❌ FAILED: Expected failure but got success')
+        console.error('❌ FAILED: Expected failure but got success')
         console.log('   Result:', result.substring(0, 100))
       }
     } catch (error: any) {

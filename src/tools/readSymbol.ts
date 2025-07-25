@@ -18,7 +18,7 @@ const MAX_SYMBOL_OFFSET = 200
 // Abort once we have this many matches
 const MAX_MATCHES = 20
 const DEFAULT_MAX_RESULTS = 5
-const DEFAULT_EXTENSIONS = ['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'cts', 'java', 'cs', 'cpp', 'c', 'h', 'hpp', 'cc', 'go', 'rs', 'php', 'swift', 'scss', 'css', 'less', 'graphql', 'gql', 'prisma', 'proto', 'd.ts']
+const DEFAULT_EXTENSIONS = ['d.ts', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'cts', 'java', 'cs', 'cpp', 'c', 'h', 'hpp', 'cc', 'go', 'rs', 'php', 'swift', 'scss', 'css', 'less', 'graphql', 'gql', 'prisma', 'proto']
 const IGNORED_DIRECTORIES = ['node_modules', 'dist', 'build', 'out', '.git']
 const IGNORED_DEEP_DIRECTORIES = ['test', 'tests', 'examples', 'bin', 'runtime']
 const IGNORED_FILES = ['*.test.*', '*.spec.*', '_*', '*.min.*']
@@ -32,7 +32,7 @@ const readSymbol = defineTool({
     file_paths: z.array(z.string().min(1)).optional().describe('File paths to search (supports relative and glob). Defaults to "." (current directory). IMPORTANT: Be specific with paths when possible, minimize broad patterns like "node_modules/**" to avoid mismatches'),
     limit: z.number().optional().describe(`Maximum number of results to return. Defaults to ${DEFAULT_MAX_RESULTS}`),
   }),
-  description: 'Find and extract symbol block by name from files, supports a lot of file formats (like TS, JS, JSON, GraphQL and most that use braces for blocks). Uses streaming with concurrency control for better performance',
+  description: 'Find and extract symbol block by name from files, supports a lot of file formats (like TS, JS, GraphQL, CSS and most that use braces for blocks). Uses streaming with concurrency control for better performance',
   isReadOnly: true,
   fromArgs: ([symbol, ...paths]) => ({ symbol, file_paths: paths.length ? paths : undefined }),
   handler: async (args) => {
@@ -196,16 +196,28 @@ const createRegex = _.memoize((symbol: string) => new RegExp((
   // Comment line(s)
   '^(?:\\s*/[/*][^\n]*\n)*' +
   // Initial line and look behind for symbol
-  `([ \t]*).{0,${MAX_SYMBOL_OFFSET}}(?<![([.\'"])\\b` +
+  `([ \t]*).{0,${MAX_SYMBOL_OFFSET}}(?<![([.\'"])` +
   // Symbol
-  _.escapeRegExp(symbol).replace(/\\\*/g, '\\w*') +
+  escapeSymbol(symbol) +
   // Look ahead until brace
-  '\\b(?![.\'")\]]).*\\s*\\{' +
+  '(?![.\'")\]]).*\\s*\\{' +
   // Indented lines
   '(?:\r?\n\\1\\s+.*)+' +
   // Until closing brace
   '[^}]*\\}'
 ), 'mg'))
+
+function escapeSymbol(symbol: string) {
+  let escaped = _.escapeRegExp(symbol)
+  // Add word boundary only if alpha
+  if (/^[\w*]/.test(symbol)) {
+    escaped = `\\b${escaped}`
+  }
+  if (/[\w*]$/.test(symbol)) {
+    escaped += '\\b'
+  }
+  return escaped.replace(/\\\*/g, '\\w*')
+}
 
 function scoreSymbol(text: string, path: string): number {
   let score = 0

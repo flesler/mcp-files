@@ -372,6 +372,36 @@ if (condition) {
     symbol: 'myFunc',
     shouldMatch: false,
   },
+  {
+    name: 'CSS ID selector',
+    content: '#links {\n  color: blue;\n  text-decoration: none;\n}',
+    symbol: '#links',
+    shouldMatch: true,
+  },
+  {
+    name: 'Single line CSS selector',
+    content: '#links { color: blue; text-decoration: none; }',
+    symbol: '#links',
+    shouldMatch: false,
+  },
+  {
+    name: 'CSS class selector',
+    content: '.navbar {\n  background: white;\n  padding: 10px;\n}',
+    symbol: '.navbar',
+    shouldMatch: true,
+  },
+  {
+    name: 'CSS pseudo-class',
+    content: 'a:hover {\n  color: red;\n  cursor: pointer;\n}',
+    symbol: ':hover',
+    shouldMatch: true,
+  },
+  {
+    name: 'CSS attribute selector',
+    content: '[data-theme="dark"] {\n  background: black;\n  color: white;\n}',
+    symbol: '[data-theme="dark"]',
+    shouldMatch: true,
+  },
 ]
 
 function runTests() {
@@ -407,7 +437,7 @@ function runTests() {
   console.log(`\n🎯 Test Summary: ${passed} passed, ${failed} failed`)
 
   if (failed > 0) {
-    console.log('❌ Some tests failed!')
+    console.error('❌ Some tests failed!')
     process.exit(1)
   } else {
     console.log('🎉 All matchSymbol tests passed!')
