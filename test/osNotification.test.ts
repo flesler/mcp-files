@@ -1,50 +1,65 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import osNotificationTool from '../src/tools/osNotification.js'
 import util from '../src/util.js'
 
-async function test() {
-  console.log('Testing osNotification tool...')
+// Module variables to track mock calls
+let mockExecSyncCalls: Array<{ cmd: string; args: any[] }> = []
 
-  try {
-    try {
-      util.execSync = ((...args: any[]) => {
-        console.log('$ execSync', ...args)
-      }) as any
-      const result1 = await osNotificationTool.handler({
-        message: 'Test notification from mcp-files test suite',
+describe('osNotification tool', () => {
+  beforeEach(() => {
+    // Mock util.execSync with call tracking
+    vi.spyOn(util, 'execSync').mockImplementation((cmd: string, ...args: any[]) => {
+      mockExecSyncCalls.push({ cmd, args })
+      // Silent mock - just return success
+      return ''
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    mockExecSyncCalls = []
+  })
+
+  it('should send notification with custom title', async () => {
+    const result = await osNotificationTool.handler({
+      message: 'Test notification from mcp-files test suite',
+      title: 'Test',
+    })
+
+    expect(result).toBeTruthy()
+    expect(typeof result).toBe('string')
+    expect(result).toContain('Test notification from mcp-files test suite')
+
+    // Verify execSync was called
+    expect(mockExecSyncCalls.length).toBeGreaterThan(0)
+  })
+
+  it('should send notification with default title', async () => {
+    const result = await osNotificationTool.handler({
+      message: 'Test with default title',
+    })
+
+    expect(result).toBeTruthy()
+    expect(typeof result).toBe('string')
+    expect(result).toContain('mcp-files')
+    expect(result).toContain('Test with default title')
+
+    // Verify execSync was called
+    expect(mockExecSyncCalls.length).toBeGreaterThan(0)
+  })
+
+  it('should handle missing notification tools gracefully', async () => {
+    // Update mock to throw an error like a missing notification tool would
+    vi.mocked(util.execSync).mockImplementation(() => {
+      throw new Error('Command not found')
+    })
+
+    // This should throw a meaningful error
+    await expect(async () => {
+      await osNotificationTool.handler({
+        message: 'Test notification',
         title: 'Test',
       })
-      console.log('✅ Notification test passed')
-      console.log('Result:', result1)
-      console.log('  (If you saw a notification popup, the test worked!)')
-    } catch (err: any) {
-      if (err.message.includes('No notification method available')) {
-        console.log('⚠️  No notification method available on this system')
-        console.log('   This is expected if notify-send, osascript, etc. are not installed')
-      } else {
-        throw err
-      }
-    }
-
-    try {
-      const result2 = await osNotificationTool.handler({
-        message: 'Test with default title',
-      })
-      console.log('✅ Default title test passed')
-      console.log('Result:', result2)
-    } catch (err: any) {
-      if (err.message.includes('No notification method available')) {
-        console.log('⚠️  Default title test skipped (no notification method)')
-      } else {
-        throw err
-      }
-    }
-
-    console.log('\n🎉 All osNotification tests completed!')
-    console.log('Note: These tests require notification tools to be installed to fully verify functionality')
-
-  } catch (err) {
-    console.error('❌ Test failed:', err)
-  }
-}
-
-test()
+    }).rejects.toThrow()
+  })
+})

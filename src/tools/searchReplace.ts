@@ -18,6 +18,7 @@ const searchReplace = defineTool({
   }),
   description: 'Search and replace with intelligent whitespace handling and automation-friendly multiple match resolution. Tries exact match first, falls back to flexible whitespace matching only when no matches found.',
   isReadOnly: false,
+  isEnabled: env.DEBUG,
   fromArgs: ([filePath = '', oldString = '', newString = '']) => ({
     file_path: filePath,
     old_string: oldString,

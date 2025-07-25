@@ -31,9 +31,10 @@
     "lint": "npm run eslint -- src/**/*.ts",
     "lint:fix": "npm run lint -- --fix",
     "lint:full": "npm run build:all && npm run lint",
-    "test:unit": "npm run ts -- test/index.test.ts",
-    "test": "npm run build:clean && npm run lint:full && SILENT=true npm run test:unit && npm run build:all && npm run start:check",
-    "prepack": "npm test",
+    "test": "vitest run",
+    "test:verbose": "npm run test -- --reporter=verbose",
+    "test:full": "npm run build:clean && npm run lint:full && npm test && npm run build:all && npm run start:check",
+    "prepack": "npm run test:full",
     "publish:dry": "npm pack --dry-run",
     "publish:npm": "npm publish",
     "publish:docker": "bin/docker-publish.sh",
@@ -85,6 +86,7 @@
     "eslint": "^8.57.0",
     "tsx": "^4.20.3",
     "types-package-json": "^2.0.39",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }
