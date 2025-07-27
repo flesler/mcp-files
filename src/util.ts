@@ -75,6 +75,15 @@ const util = {
   },
 
   execSync,
+
+  int,
+}
+
+function int(str: string): number | undefined
+function int(str: string, def: number): number
+function int(str: string, def?: number) {
+  const num = Number.parseInt(str, 10)
+  return Number.isNaN(num) ? def : num
 }
 
 export default util

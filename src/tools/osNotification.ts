@@ -12,10 +12,7 @@ const osNotification = defineTool({
   }),
   description: 'Send OS notifications using native notification systems.',
   isReadOnly: true,
-  fromArgs: ([message = '', title = '']) => ({
-    message,
-    title: title || undefined,
-  }),
+  fromArgs: ([message, title]) => ({ message, title: title || undefined }),
   handler: (args) => {
     const { message, title = basename(util.CWD) } = args
     const strategy = getStrategy()

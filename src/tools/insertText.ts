@@ -20,8 +20,8 @@ const insertText = defineTool({
     - TIP: Combine with read_symbol to edit any symbol anywhere without knowing its file or line range!
   `),
   isReadOnly: false,
-  fromArgs: ([filePath = '', fromLine = '', text = '', toLine = '']) => ({
-    file_path: filePath, from_line: parseInt(fromLine, 10), text, to_line: toLine ? parseInt(toLine, 10) : undefined,
+  fromArgs: ([filePath, fromLine, text, toLine]) => ({
+    file_path: filePath, from_line: util.int(fromLine)!, text, to_line: util.int(toLine),
   }),
   handler: (args) => {
     const fullPath = util.resolve(args.file_path)

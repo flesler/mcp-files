@@ -13,10 +13,7 @@ const importSymbol = defineTool({
   description: 'Import and inspect JavaScript/TypeScript modules ala require(), or import()',
   isReadOnly: true,
   isEnabled: env.DEBUG,
-  fromArgs: ([module_path = '', property]) => ({
-    module_path,
-    property: property || undefined,
-  }),
+  fromArgs: ([module_path, property]) => ({ module_path, property: property || undefined }),
   handler: async (args) => {
     const { module_path: modulePath, property } = args
     const resolvedPath = modulePath.startsWith('.')

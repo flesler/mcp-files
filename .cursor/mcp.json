@@ -2,7 +2,7 @@
   "mcpServers": {
     "mcp-files-local": {
       "command": "node",
-      "args": ["/home/flesler/Code/mcp/mcp-files/dist/index.js"],
+      "args": ["./dist/index.js"],
       "env": {
         "DEBUG": "true"
       }
