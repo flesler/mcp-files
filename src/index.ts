@@ -42,5 +42,5 @@ Examples:
 // Library exports - available for programmatic usage
 export { default as cli } from './cli.js'
 export { default as tools } from './tools.js'
-export type * from './types.js'
+export type { Tool } from './types.js'
 
