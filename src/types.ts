@@ -1,4 +1,4 @@
-import { z, ZodSchema } from 'zod'
+import type { z, ZodSchema } from 'zod'
 
 export interface ToolResult {
   success: boolean

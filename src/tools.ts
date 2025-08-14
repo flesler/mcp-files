@@ -1,11 +1,11 @@
-import { ZodSchema } from 'zod'
+import type { ZodSchema } from 'zod'
 import importSymbol from './tools/importSymbol.js'
 import insertText from './tools/insertText.js'
 import osNotification from './tools/osNotification.js'
 import readSymbol from './tools/readSymbol.js'
 import searchReplace from './tools/searchReplace.js'
 import utilsDebug from './tools/utilsDebug.js'
-import { Tool, ToolConfig } from './types.js'
+import type { Tool, ToolConfig } from './types.js'
 
 export function defineTool<N extends string, S extends ZodSchema = ZodSchema>(
   config: ToolConfig<N, S>,

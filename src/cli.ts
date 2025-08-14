@@ -3,7 +3,7 @@ import { ZodError } from 'zod'
 import env from './env.js'
 import logger from './logger.js'
 import tools from './tools.js'
-import { Tool } from './types.js'
+import type { Tool } from './types.js'
 
 const cli = {
   isCommand: (arg?: string) => arg && arg in tools,
