@@ -61,8 +61,6 @@ function createCursorLikePattern(text: string) {
   , 'gm')
 }
 
-
-
 export default searchReplace
 
 function formatDiff(original: string, updated: string): string {

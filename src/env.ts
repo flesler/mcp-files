@@ -1,4 +1,3 @@
-
 const env = {
   PORT: readNumber('PORT', 4657),
   TRANSPORT: readString('TRANSPORT', 'stdio'),

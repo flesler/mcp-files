@@ -184,7 +184,6 @@ export function findBlocks(content: string, symbol: string, path: string, fileIn
   return results
 }
 
-
 export function matchSymbol(content: string, symbol: string) {
   const regex = createRegex(symbol)
   regex.lastIndex = 0
