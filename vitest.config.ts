@@ -10,7 +10,7 @@ export default defineConfig(() => ({
     environment: 'node',
     include: ['test/**/*.test.ts'],
     exclude: ['node_modules', 'dist', 'tmp'],
-    reporters: ['default'],
+    reporters: ['dot'],
     logHeapUsage: false,
     outputFile: undefined, // Disable file output
     silent: false, // Keep error messages visible

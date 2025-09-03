@@ -103,8 +103,8 @@ export function mapPattern(pattern: string) {
 
 export function generateIgnorePatterns(patterns: string[]): string[] {
   const dirs = IGNORED_DIRECTORIES
-    .concat(IGNORED_DEEP_DIRECTORIES.map(dir => `**/${dir}`))
-    .filter(dir => !patterns.some(pattern => pattern.includes(dir)))
+    .filter(dir => !patterns.some(pattern => pattern.includes(`${dir}/`)))
+    .concat(IGNORED_DEEP_DIRECTORIES.map(dir => `*/**/${dir}`))
   const ignore = [`!**/{${IGNORED_FILES.join(',')}}`]
   if (dirs.length) {
     ignore.push(`!{${dirs.join(',')}}/**`)

@@ -10,7 +10,7 @@ interface TestCase {
 describe('readSymbol tool', () => {
   describe('generateIgnorePatterns function', () => {
     const NEGATIVE_FILES = '!**/{*.test.*,*.spec.*,_*,*.min.*}'
-    const DEFAULT_IGNORED_DIRS = '{node_modules,dist,build,out,.git,**/test,**/tests,**/examples,**/bin,**/runtime}'
+    const DEFAULT_IGNORED_DIRS = '{node_modules,dist,build,out,.git,*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}'
 
     const testCases: TestCase[] = [
       {
@@ -33,20 +33,20 @@ describe('readSymbol tool', () => {
 
       {
         description: 'Should only ignore directories not explicitly requested',
-        input: ['node_modules', 'dist', 'build'],
-        expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('node_modules,dist,build,', '')}/**`],
+        input: ['node_modules/', 'dist/', 'build/'],
+        expected: [NEGATIVE_FILES, '!{out,.git,*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}/**'],
       },
 
       {
         description: 'Should ignore files and remaining directories when most directories explicitly requested',
-        input: ['node_modules', 'dist', 'build', 'out', '.git'],
-        expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('node_modules,dist,build,out,.git,', '')}/**`],
+        input: ['node_modules/', 'dist/', 'build/', 'out/', '.git/'],
+        expected: [NEGATIVE_FILES, '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}/**'],
       },
 
       {
         description: 'Should ignore files and remaining directories when most directories explicitly requested',
-        input: ['node_modules', 'dist', 'build', 'out', '.git', '**/test', '**/tests'],
-        expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('node_modules,dist,build,out,.git,**/test,**/tests,', '')}/**`],
+        input: ['node_modules/', 'dist/', 'build/', 'out/', '.git/', '*/**/test', '*/**/tests'],
+        expected: [NEGATIVE_FILES, '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}/**'],
       },
 
       {
@@ -63,8 +63,8 @@ describe('readSymbol tool', () => {
 
       {
         description: 'Should NOT ignore **/test when explicitly included with glob pattern',
-        input: ['src/**/*.ts', '**/test/**/*.ts'],
-        expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('**/test,', '')}/**`],
+        input: ['src/**/*.ts', '*/**/test/**/*.ts'],
+        expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS}/**`],
       },
     ]
 
