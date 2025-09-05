@@ -420,5 +420,78 @@ if (condition) {
         }
       })
     })
+
+    // Multi-symbol tests
+    describe('Multi-symbol functionality', () => {
+      it('should find multiple symbols in content', () => {
+        const content = `
+function myFunc() {
+  return 'hello'
+}
+
+class MyClass {
+  constructor() {}
+}
+
+interface MyInterface {
+  prop: string
+}
+`
+        const matches = [...matchSymbol(content, ['myFunc', 'MyClass', 'MyInterface'])]
+        expect(matches.length).toBe(3)
+      })
+
+      it('should find only matching symbols from array', () => {
+        const content = `
+function existingFunc() {
+  return 'exists'
+}
+
+class ExistingClass {
+  constructor() {}
+}
+`
+        const matches = [...matchSymbol(content, ['existingFunc', 'nonExistent', 'ExistingClass'])]
+        expect(matches.length).toBe(2)
+      })
+
+      it('should work with single symbol in array', () => {
+        const content = `
+function myFunc() {
+  return 'hello'
+}
+`
+        const matches = [...matchSymbol(content, ['myFunc'])]
+        expect(matches.length).toBe(1)
+      })
+
+      it('should find no matches when no symbols exist', () => {
+        const content = `
+function otherFunc() {
+  return 'other'
+}
+`
+        const matches = [...matchSymbol(content, ['nonExistent1', 'nonExistent2'])]
+        expect(matches.length).toBe(0)
+      })
+
+      it('should work with wildcards in multi-symbol search', () => {
+        const content = `
+function getUserData() {
+  return 'user data'
+}
+
+function getAdminData() {
+  return 'admin data'
+}
+
+function processInfo() {
+  return 'info'
+}
+`
+        const matches = [...matchSymbol(content, ['get*', 'process*'])]
+        expect(matches.length).toBe(3)
+      })
+    })
   })
 })

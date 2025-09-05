@@ -20,15 +20,17 @@ Server Usage:
   TRANSPORT=http ${cmd}      # Run MCP server with HTTP transport
 
 CLI Usage:
-  ${cmd} read_symbol <symbol> <file1> [file2...]      # Find code blocks by symbol name
-  ${cmd} import_symbol <module_path> [property]       # Inspect modules and imports  
-  ${cmd} search_replace <file> <old_text> <new_text>    # Search and replace with whitespace handling
-  ${cmd} insert_text <file> <from_line> <text> [to_line] # Insert or replace text at line range (1-based)
-  ${cmd} os_notification <message> [title]            # Send OS notifications (title defaults to current directory)
-  ${cmd} utils_debug                                  # Get debug information
+  ${cmd} read_symbol <symbol[,symbol2,...]> <file1> [file2...]  # Find code blocks by symbol name(s)
+  ${cmd} import_symbol <module_path> [property]                 # Inspect modules and imports  
+  ${cmd} search_replace <file> <old_text> <new_text>            # Search and replace with whitespace handling
+  ${cmd} insert_text <file> <from_line> <text> [to_line]       # Insert or replace text at line range (1-based)
+  ${cmd} os_notification <message> [title]                     # Send OS notifications (title defaults to current directory)
+  ${cmd} utils_debug                                           # Get debug information
 
 Examples:
   ${cmd} read_symbol "ToolConfig" src/types.ts
+  ${cmd} read_symbol "User,UserService,UserInterface" src/
+  ${cmd} read_symbol "get*,process*" src/
   ${cmd} import_symbol lodash get
   ${cmd} search_replace src/app.ts "old code" "new code"
   ${cmd} insert_text src/app.ts 10 "console.log('debug')"     # Insert at line 10

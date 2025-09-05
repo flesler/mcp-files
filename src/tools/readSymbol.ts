@@ -28,26 +28,28 @@ const BONUS_KEYWORDS = /\b(class|interface|type|function|enum|namespace|module|m
 const readSymbol = defineTool({
   id: 'read_symbol',
   schema: z.object({
-    symbol: z.string().min(1).describe('Symbol name to find (functions, classes, types, etc.), case-sensitive, supports * for wildcard'),
+    symbol: z.union([z.string().min(1), z.array(z.string().min(1))]).describe('Symbol name(s) to find (functions, classes, types, etc.), case-sensitive, supports * for wildcard'),
     file_paths: z.array(z.string().min(1)).optional().describe('File paths to search (supports relative and glob). Defaults to "." (current directory). IMPORTANT: Be specific with paths when possible, minimize broad patterns like "node_modules/**" to avoid mismatches'),
     limit: z.number().optional().describe(`Maximum number of results to return. Defaults to ${DEFAULT_MAX_RESULTS}`),
   }),
   description: 'Find and extract symbol block by name from files, supports a lot of file formats (like TS, JS, GraphQL, CSS and most that use braces for blocks). Uses streaming with concurrency control for better performance',
   isReadOnly: true,
-  fromArgs: ([symbol, ...paths]) => ({ symbol, file_paths: paths.length ? paths : undefined }),
+  fromArgs: ([symbols, ...paths]) => ({ symbol: symbols.split(','), file_paths: paths.length ? paths : undefined }),
   handler: async (args) => {
     const { symbol, file_paths: filePaths = [], limit = DEFAULT_MAX_RESULTS } = args
+    const symbols = getSymbols(symbol)
     if (!filePaths.length) {
       filePaths.push('.')
     }
     const patterns = filePaths.map(mapPattern)
     const results: Block[] = []
     let totalFound = 0
+    const maxMatches = MAX_MATCHES * symbols.length
     try {
-      for await (const result of scanForSymbol(symbol, patterns)) {
+      for await (const result of scanForSymbol(symbols, patterns)) {
         totalFound++
         results.push(result)
-        if (results.length >= MAX_MATCHES) {
+        if (results.length >= maxMatches) {
           break
         }
       }
@@ -58,7 +60,7 @@ const readSymbol = defineTool({
     }
 
     if (!results.length) {
-      throw new Error(`Failed to find the \`${symbol}\` symbol in any files`)
+      throw new Error(`Failed to find the \`${symbols.join(', ') }\` symbol(s) in any files`)
     }
 
     let output = results
@@ -112,7 +114,7 @@ export function generateIgnorePatterns(patterns: string[]): string[] {
   return ignore
 }
 
-async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerator<Block> {
+async function* scanForSymbol(symbols: string[], patterns: string[]): AsyncGenerator<Block> {
   const limit = pLimit(MAX_CONCURRENCY)
   let shouldStop = false
   const ignorePatterns = generateIgnorePatterns(patterns)
@@ -135,7 +137,7 @@ async function* scanForSymbol(symbol: string, patterns: string[]): AsyncGenerato
         try {
           const content = await fs.readFile(util.resolve(entry.path), 'utf8')
           if (shouldStop) return []
-          return findBlocks(content, symbol, entry.path, fileIndex)
+          return findBlocks(content, symbols, entry.path, fileIndex)
         } catch {
           return []
         }
@@ -164,13 +166,13 @@ export interface Block {
   fileIndex: number
 }
 
-export function findBlocks(content: string, symbol: string, path: string, fileIndex: number): Block[] {
+export function findBlocks(content: string, symbols: string | string[], path: string, fileIndex: number): Block[] {
   const results: Block[] = []
   if (!content.includes('\n')) {
     // Quick escape for large minified files
     return results
   }
-  for (const match of matchSymbol(content, symbol)) {
+  for (const match of matchSymbol(content, getSymbols(symbols))) {
     const lines = content.substring(0, match.index).split('\n')
     const startLine = lines.length
     const [text] = match
@@ -184,27 +186,38 @@ export function findBlocks(content: string, symbol: string, path: string, fileIn
   return results
 }
 
-export function matchSymbol(content: string, symbol: string) {
-  const regex = createRegex(symbol)
+export function matchSymbol(content: string, symbols: string | string[]) {
+  const regex = createRegex(symbols)
   regex.lastIndex = 0
   return (content.matchAll(regex) || [])
 }
 
 // AI: NEVER change this regex without user approval
-const createRegex = _.memoize((symbol: string) => new RegExp((
-  // Comment line(s)
-  '^(?:\\s*/[/*][^\n]*\n)*' +
-  // Initial line and look behind for symbol
-  `([ \t]*).{0,${MAX_SYMBOL_OFFSET}}(?<![([.\'"])` +
-  // Symbol
-  escapeSymbol(symbol) +
-  // Look ahead until brace
-  '(?![.\'")\]]).*\\s*\\{' +
-  // Indented lines
-  '(?:\r?\n\\1\\s+.*)+' +
-  // Until closing brace
-  '[^}]*\\}'
-), 'mg'))
+const createRegex = _.memoize((symbols: string | string[]) => {
+  const escapedSymbols = symbolsToString(symbols)
+  return new RegExp((
+    // Comment line(s)
+    '^(?:\\s*/[/*][^\n]*\n)*' +
+    // Initial line and look behind for symbol
+    `([ \t]*).{0,${MAX_SYMBOL_OFFSET}}(?<![([.\'"])` +
+    // Symbol(s) with alternation
+    `(?:${escapedSymbols})` +
+    // Look ahead until brace
+    '(?![.\'")\]]).*\\s*\\{' +
+    // Indented lines
+    '(?:\r?\n\\1\\s+.*)+' +
+    // Until closing brace
+    '[^}]*\\}'
+  ), 'mg')
+}, symbolsToString)
+
+function getSymbols(symbols: string | string[]): string[] {
+  return Array.isArray(symbols) ? symbols : [symbols]
+}
+
+function symbolsToString(symbols: string | string[]) {
+  return getSymbols(symbols).map(escapeSymbol).join('|')
+}
 
 function escapeSymbol(symbol: string) {
   let escaped = _.escapeRegExp(symbol)

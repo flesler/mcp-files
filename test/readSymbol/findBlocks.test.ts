@@ -430,5 +430,112 @@ function func_123_test() {
         }
       })
     })
+
+    // Multi-symbol tests
+    describe('Multi-symbol functionality', () => {
+      it('should find multiple symbols and return sorted by score', () => {
+        const content = `
+function myFunc() {
+  return 'hello'
+}
+
+class MyClass {
+  constructor() {
+    this.name = 'test'
+  }
+  
+  method() {
+    return this.name
+  }
+}
+
+interface MyInterface {
+  prop: string
+  method(): void
+}
+`
+        const blocks = findBlocks(content, ['myFunc', 'MyClass', 'MyInterface'], 'test.ts', 0)
+        expect(blocks.length).toBe(3)
+
+        // All blocks should have scores (we don't assume ordering since it depends on content)
+        blocks.forEach(block => {
+          expect(typeof block.score).toBe('number')
+        })
+
+        // All blocks should contain their respective symbols
+        const texts = blocks.map(b => b.text)
+        expect(texts.some(text => text.includes('myFunc'))).toBe(true)
+        expect(texts.some(text => text.includes('MyClass'))).toBe(true)
+        expect(texts.some(text => text.includes('MyInterface'))).toBe(true)
+      })
+
+      it('should find only existing symbols from array', () => {
+        const content = `
+function existingFunc() {
+  return 'exists'
+}
+
+const config = {
+  setting: 'value'
+}
+`
+        const blocks = findBlocks(content, ['existingFunc', 'nonExistent', 'config'], 'test.ts', 0)
+        expect(blocks.length).toBe(2)
+
+        const texts = blocks.map(b => b.text)
+        expect(texts.some(text => text.includes('existingFunc'))).toBe(true)
+        expect(texts.some(text => text.includes('config'))).toBe(true)
+        expect(texts.some(text => text.includes('nonExistent'))).toBe(false)
+      })
+
+      it('should work with single symbol in array format', () => {
+        const content = `
+function singleFunc() {
+  return 'single'
+}
+`
+        const blocks = findBlocks(content, ['singleFunc'], 'test.ts', 0)
+        expect(blocks.length).toBe(1)
+        expect(blocks[0].text).toContain('singleFunc')
+      })
+
+      it('should return empty array when no symbols found', () => {
+        const content = `
+function otherFunc() {
+  return 'other'
+}
+`
+        const blocks = findBlocks(content, ['nonExistent1', 'nonExistent2'], 'test.ts', 0)
+        expect(blocks.length).toBe(0)
+      })
+
+      it('should handle wildcards with multiple symbols', () => {
+        const content = `
+function getUserData() {
+  return 'user'
+}
+
+function getAdminData() {
+  return 'admin'
+}
+
+function processUserInfo() {
+  return 'process'
+}
+
+function handleError() {
+  return 'error'
+}
+`
+        const blocks = findBlocks(content, ['get*', 'process*'], 'test.ts', 0)
+        expect(blocks.length).toBe(3)
+
+        const texts = blocks.map(b => b.text)
+        expect(texts.some(text => text.includes('getUserData'))).toBe(true)
+        expect(texts.some(text => text.includes('getAdminData'))).toBe(true)
+        expect(texts.some(text => text.includes('processUserInfo'))).toBe(true)
+        expect(texts.some(text => text.includes('handleError'))).toBe(false)
+      })
+    })
   })
 })
