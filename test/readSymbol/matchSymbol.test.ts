@@ -408,7 +408,7 @@ if (condition) {
 
     testCases.forEach((testCase) => {
       it(`${testCase.name} - should ${testCase.shouldMatch ? 'match' : 'not match'}`, () => {
-        const matches = [...matchSymbol(testCase.content, testCase.symbol)]
+        const matches = [...matchSymbol(testCase.content, [testCase.symbol])]
         const hasMatch = matches.length > 0
 
         if (testCase.shouldMatch) {

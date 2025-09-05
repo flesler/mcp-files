@@ -79,7 +79,7 @@ Then:
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `read_symbol` | Find and extract code blocks by symbol name(s) from files. Supports multiple symbols via comma-separation or array | `symbol` (string\|string[]), `file_paths[]?`, `limit?` |
+| `read_symbol` | Find and extract code blocks by symbol name(s) from files. Supports multiple symbols via array | `symbols` (string[]), `file_paths[]?`, `limit?` |
 | `import_symbol` | Import and inspect JavaScript/TypeScript modules and their properties | `module_path`, `property?` |
 | `search_replace` | Search and replace with intelligent whitespace handling and automation-friendly multiple match resolution | `file_path`, `old_string`, `new_string`, `allow_multiple_matches?` |
 | `insert_text` | Insert/replace text at precise line ranges. Perfect for direct line operations from code citations (12:15:file.ts) and surgical edits in large files | `file_path`, `from_line`, `text`, `to_line` |
@@ -94,11 +94,11 @@ The combination of `read_symbol` + `insert_text` unlocks **revolutionary code ed
 **1. Symbol Discovery (`read_symbol`)** - Find ANY symbol(s) ANYWHERE in your codebase:
 ```typescript
 // Find single function/class/interface anywhere in repo
-read_symbol("generateApiKey")
+read_symbol({symbols: ["generateApiKey"]})
 // → Returns: exact location (lines 45-52 in src/auth/tokens.ts)
 
 // Find multiple symbols at once
-read_symbol(["User", "UserService", "UserInterface"])
+read_symbol({symbols: ["User", "UserService", "UserInterface"]})
 // → Returns: all matching symbols with their locations
 ```
 
@@ -229,7 +229,7 @@ npm run ts test/index.test.ts
 # CLI testing
 node dist/index.js read_symbol "functionName" file.ts
 
-# Multiple symbols
+# Multiple symbols (comma-separated in CLI)
 node dist/index.js read_symbol "func1,func2,Class*" file.ts
 
 # Or search current directory

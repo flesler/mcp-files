@@ -403,7 +403,7 @@ function func_123_test() {
 
     testCases.forEach((testCase) => {
       it(testCase.name, () => {
-        const blocks = findBlocks(testCase.content, testCase.symbol, 'test.ts', 0)
+        const blocks = findBlocks(testCase.content, [testCase.symbol], 'test.ts', 0)
 
         // Check expected count
         expect(blocks.length).toBe(testCase.expectedCount)
