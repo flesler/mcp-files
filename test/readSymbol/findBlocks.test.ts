@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { Block, findBlocks } from '../../src/tools/readSymbol.js'
+import type { Block } from '../../src/tools/readSymbol.js'
+import { findBlocks } from '../../src/tools/readSymbol.js'
 
 interface TestCase {
   name: string

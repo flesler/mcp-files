@@ -33,6 +33,7 @@
     "lint:fix": "npm run lint -- --fix",
     "lint:full": "npm run build:check && npm run lint",
     "test": "vitest run",
+    "test:min": "MINIMAL=1 vitest run",
     "test:verbose": "npm run test -- --reporter=verbose",
     "test:full": "npm run build:clean && npm run lint:full && npm test && npm run build:all && npm run start:check",
     "prepack": "npm run test:full",

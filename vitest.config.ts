@@ -10,11 +10,16 @@ export default defineConfig(() => ({
     environment: 'node',
     include: ['test/**/*.test.ts'],
     exclude: ['node_modules', 'dist', 'tmp'],
-    reporters: ['dot'],
+    // Minimal output to conserve AI context window
+    reporters: process.env.MINIMAL ? [new MinimalReporter()] : ['dot'],
     logHeapUsage: false,
-    outputFile: undefined, // Disable file output
-    silent: false, // Keep error messages visible
-    ui: false, // Disable web UI
+    outputFile: undefined,
+    silent: false,
+    ui: false,
+    // Minimize output noise
+    disableConsoleIntercept: true, // Don't capture console.log
+    // Remove useless stack traces from test case arrays
+    onStackTrace: () => false, // Suppress all code frames
     // Performance optimizations
     pool: 'threads',
     poolOptions: {
@@ -30,3 +35,35 @@ export default defineConfig(() => ({
     target: 'node20',
   },
 }))
+
+class MinimalReporter {
+  onFinished(files: any[] = []) {
+    let totalTests = 0
+    let failedTests = 0
+    const countAndShowTask = (task: any) => {
+      if (task.type === 'test') {
+        totalTests++
+        if (task.result?.state === 'fail') {
+          failedTests++
+          console.log(`❌ ${task.name}`)
+          if (task.result?.errors?.[0]) {
+            const err = task.result.errors[0]
+            // Simple approach: just show the first line, skip noise
+            console.log(`  ${err.message.split('\n')[0]}`)
+          }
+        }
+      }
+      // Recursively count nested tasks  
+      if (task.tasks) {
+        task.tasks.forEach((subtask: any) => countAndShowTask(subtask))
+      }
+    }
+    files.forEach(file => {
+      if (file.tasks) {
+        file.tasks.forEach((task: any) => countAndShowTask(task))
+      }
+    })
+    // Simple summary
+    console.log(`\n${failedTests > 0 ? '❌' : '✅'} ${totalTests - failedTests} passed, ${failedTests} failed`)
+  }
+}
