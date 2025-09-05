@@ -1,6 +1,6 @@
 {
   "name": "mcp-files",
-  "version": "1.5.4",
+  "version": "1.6.0",
   "type": "module",
   "description": "Enables agents to quickly find and edit code in a codebase with surgical precision. Find symbols, edit them everywhere",
   "main": "dist/index.js",
@@ -40,7 +40,7 @@
     "publish:dry": "npm pack --dry-run",
     "publish:npm": "npm publish",
     "publish:docker": "bin/docker-publish.sh",
-    "publish:test": "npx mcp-files --help",
+    "publish:test": "cd /tmp && npx mcp-files --help",
     "publish:all": "npm run publish:npm && npm run publish:docker && npm run publish:test",
     "version:patch": "npm version patch",
     "version:minor": "npm version minor",
