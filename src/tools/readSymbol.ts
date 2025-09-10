@@ -1,5 +1,5 @@
 import fg from 'fast-glob'
-import fs from 'fs/promises'
+import fs from 'fs'
 import _ from 'lodash'
 import pLimit from 'p-limit'
 import { z } from 'zod'
@@ -59,6 +59,9 @@ const readSymbol = defineTool({
     }
 
     if (!results.length) {
+      if (env.COLLECT_MISMATCHES) {
+        collectMismatch({ symbols, file_paths: filePaths, limit })
+      }
       throw new Error(`Failed to find the \`${symbols.join(', ') }\` symbol(s) in any files`)
     }
 
@@ -134,7 +137,7 @@ async function* scanForSymbol(symbols: string[], patterns: string[]): AsyncGener
       const task = limit(async () => {
         if (shouldStop) return []
         try {
-          const content = await fs.readFile(util.resolve(entry.path), 'utf8')
+          const content = await fs.promises.readFile(util.resolve(entry.path), 'utf8')
           if (shouldStop) return []
           return findBlocks(content, symbols, entry.path, fileIndex)
         } catch {
@@ -251,6 +254,27 @@ function formatResult(block: Block): string {
     header += ` | Chars: ${length} | Index: ${block.index}-${block.index + length} | File: #${block.fileIndex} | Score: ${block.score} | Time: ${elapsed}ms`
   }
   return `=== ${header} ===\n${block.text}`
+}
+
+interface MismatchEntry {
+  symbols: string[]
+  file_paths: string[]
+  limit: number
+  cwd: string
+  timestamp: string
+}
+
+function collectMismatch(args: Pick<MismatchEntry, 'symbols' | 'file_paths' | 'limit'>): void {
+  try {
+    const mismatchFile = util.resolve('./mismatches.ndjson', util.REPO)
+    const entry: MismatchEntry = {
+      ...args, cwd: process.cwd(),
+      timestamp: new Date().toISOString(),
+    }
+    util.appendNdjson(mismatchFile, entry)
+  } catch {
+    // Silently fail to avoid breaking the main functionality
+  }
 }
 
 export default readSymbol

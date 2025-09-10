@@ -38,11 +38,17 @@ const util = {
     fs.writeFileSync(path, content, 'utf-8')
   },
 
-  mkdirp(path: string): void {
+  appendNdjson(path: string, ...lines: object[]): void {
+    util.mkdirp(dirname(path))
+    const content = lines.map(line => JSON.stringify(line)).join('\n') + '\n'
+    fs.appendFileSync(path, content, 'utf-8')
+  },
+
+  mkdirp: _.memoize((path: string): void => {
     if (!util.exists(path)) {
       fs.mkdirSync(path, { recursive: true })
     }
-  },
+  }),
 
   ext(path: string): string {
     const match = path.match(/\.(\w{2,5})$/)

@@ -3,6 +3,8 @@ const env = {
   TRANSPORT: readString('TRANSPORT', 'stdio'),
   DEBUG: readBoolean('DEBUG', false),
   OVERRIDE_S_R: readBoolean('OVERRIDE_S_R', false),
+  // Used internally by the developer to collect mismatches on its local machine
+  COLLECT_MISMATCHES: readBoolean('COLLECT_MISMATCHES', false),
   // Set by cli.ts
   CLI: false,
 }

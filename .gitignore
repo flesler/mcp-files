@@ -27,4 +27,5 @@ Thumbs.db
 # Logs
 logs
 *.log
-logs.json 
+logs.ndjson
+mismatches.ndjson
