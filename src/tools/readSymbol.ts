@@ -268,7 +268,7 @@ function collectMismatch(args: Pick<MismatchEntry, 'symbols' | 'file_paths' | 'l
   try {
     const mismatchFile = util.resolve('./mismatches.ndjson', util.REPO)
     const entry: MismatchEntry = {
-      ...args, cwd: process.cwd(),
+      ...args, cwd: util.CWD,
       timestamp: new Date().toISOString(),
     }
     util.appendNdjson(mismatchFile, entry)
