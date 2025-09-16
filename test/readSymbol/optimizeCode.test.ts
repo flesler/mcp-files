@@ -1,0 +1,162 @@
+import { describe, expect, it } from 'vitest'
+import { optimizeCode } from '../../src/tools/readSymbol.js'
+
+interface TestCase {
+  name: string
+  input: string
+  expected: string
+}
+
+describe('readSymbol tool', () => {
+  describe('optimizeCode function', () => {
+    const testCases: TestCase[] = [
+      {
+        name: 'strips line comments',
+        input: `function test() {
+  // This is a comment
+  const x = 1;
+  return x;
+}`,
+        expected: `function test() {
+\tconst x = 1;
+\treturn x;
+}`,
+      },
+      {
+        name: 'strips block comments',
+        input: `function test() {
+  const x = 1; /* inline comment */
+  /* block comment */
+  return x;
+}`,
+        expected: `function test() {
+\tconst x = 1;
+\treturn x;
+}`,
+      },
+      {
+        name: 'strips multiline block comments',
+        input: `function test() {
+  /* This is a multiline
+     block comment */
+  const x = 1;
+  return x;
+}`,
+        expected: `function test() {
+\tconst x = 1;
+\treturn x;
+}`,
+      },
+      {
+        name: 'collapses multiple consecutive newlines',
+        input: `function test() {
+  const x = 1;
+
+
+  const y = 2;
+
+
+
+  return x + y;
+}`,
+        expected: `function test() {
+\tconst x = 1;
+\tconst y = 2;
+\treturn x + y;
+}`,
+      },
+      {
+        name: 'removes base indentation',
+        input: `    function test() {
+      const x = 1;
+      if (x > 0) {
+        return x;
+      }
+      return 0;
+    }`,
+        expected: `function test() {
+\tconst x = 1;
+\tif (x > 0) {
+\t\treturn x;
+\t}
+\treturn 0;
+}`,
+      },
+      {
+        name: 'handles mixed tabs and spaces',
+        input: `\t\tfunction test() {
+\t\t\tconst x = 1;
+\t\t\treturn x;
+\t\t}`,
+        expected: `function test() {
+\tconst x = 1;
+\treturn x;
+}`,
+      },
+      {
+        name: 'handles complex case with comments, newlines, and indentation',
+        input: `    // Leading comment
+    function complexTest() {
+      // Inline comment
+      const x = 1;
+
+      /* Block comment */
+      const y = 2;
+
+
+      // Multiple blank lines above
+
+
+      if (x > 0) {
+        // Nested comment
+        return x + y;
+      }
+
+      return 0;
+    }`,
+        expected: `function complexTest() {
+\tconst x = 1;
+\tconst y = 2;
+\tif (x > 0) {
+\t\treturn x + y;
+\t}
+\treturn 0;
+}`,
+      },
+      {
+        name: 'preserves empty string',
+        input: '',
+        expected: '',
+      },
+      {
+        name: 'handles single line',
+        input: 'const x = 1;',
+        expected: 'const x = 1;',
+      },
+      {
+        name: 'converts 4-space indentation to tabs',
+        input: `function test() {
+    const x = 1;
+    if (x > 0) {
+        return x;
+    }
+    return 0;
+}`,
+        expected: `function test() {
+\tconst x = 1;
+\tif (x > 0) {
+\t\treturn x;
+\t}
+\treturn 0;
+}`,
+      },
+    ]
+
+    testCases.forEach(({ name, input, expected }) => {
+      it(name, () => {
+        const result = optimizeCode(input)
+        expect(result).toBe(expected)
+      })
+    })
+  })
+})

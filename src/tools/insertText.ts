@@ -17,7 +17,7 @@ const insertText = defineTool({
   description: util.trimLines(`
     Insert or replace text at precise line ranges in files
     - Ideal for direct line-number operations (from code citations like 12:15:file.ts) and large files where context-heavy editing is inefficient.
-    - TIP: Combine with read_symbol to edit any symbol anywhere without knowing its file or line range!
+    - TIP: Combine with read_symbol (must use optimize: false!) to edit any symbol anywhere without knowing its file or line range!
   `),
   isReadOnly: false,
   fromArgs: ([filePath, fromLine, text, toLine]) => ({

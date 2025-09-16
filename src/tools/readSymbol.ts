@@ -32,12 +32,13 @@ const readSymbol = defineTool({
     symbols: z.array(z.string().min(1)).describe('Symbol name(s) to find (functions, classes, types, etc.), case-sensitive, supports * for wildcard'),
     file_paths: z.array(z.string().min(1)).optional().describe('File paths to search (supports relative and glob). Defaults to "." (current directory). IMPORTANT: Be specific with paths when possible, minimize broad patterns like "node_modules/**" to avoid mismatches'),
     limit: z.number().optional().describe(`Maximum number of results to return. Defaults to ${DEFAULT_MAX_RESULTS}`),
+    optimize: z.boolean().optional().describe('Unless explicitly false, this tool will strip comments and spacing to preserve AI\'s context window, omit unless you REALLY it unchanged (default: true)'),
   }),
   description: 'Find and extract symbol block by name from files, supports a lot of file formats (like TS, JS, GraphQL, CSS and most that use braces for blocks). Uses streaming with concurrency control for better performance',
   isReadOnly: true,
   fromArgs: ([symbols, ...paths]) => ({ symbols: symbols.split(','), file_paths: paths.length ? paths : undefined }),
   handler: async (args) => {
-    const { symbols, file_paths: filePaths = [], limit = DEFAULT_MAX_RESULTS } = args
+    const { symbols, file_paths: filePaths = [], limit = DEFAULT_MAX_RESULTS, optimize = true } = args
     if (!filePaths.length) {
       filePaths.push('.')
     }
@@ -69,7 +70,7 @@ const readSymbol = defineTool({
     let output = results
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
-      .map(formatResult)
+      .map(block => formatResult(block, optimize))
       .join('\n\n')
     if (totalFound > results.length) {
       output += `\n\n--- Showing ${results.length} matches out of ${totalFound} ---`
@@ -262,14 +263,51 @@ function scoreSymbol(text: string, path: string): number {
   return Math.round(score)
 }
 
-function formatResult(block: Block): string {
+function formatResult(block: Block, optimize = false): string {
   let header = `${block.startLine}:${block.endLine}:${block.path}`
-  if (env.CLI && env.DEBUG) {
-    const { length } = block.text
-    const elapsed = Math.round(process.uptime() * 1000)
-    header += ` | Chars: ${length} | Index: ${block.index}-${block.index + length} | File: #${block.fileIndex} | Score: ${block.score} | Time: ${elapsed}ms`
+  let { text } = block
+  const { length } = text
+  if (optimize) {
+    text = optimizeCode(text)
   }
-  return `=== ${header} ===\n${block.text}`
+  if (env.CLI && env.DEBUG) {
+    const elapsed = Math.round(process.uptime() * 1000)
+    header += ` | Chars: ${length}->${text.length} | Index: ${block.index}-${block.index + length} | File: #${block.fileIndex} | Score: ${block.score} | Time: ${elapsed}ms`
+  }
+  return `=== ${header} ===\n${text}`
+}
+
+/** Optimize code by stripping comments and normalizing indentation */
+export function optimizeCode(text: string): string {
+  // Strip comments and clean up whitespace
+  const cleaned = text
+    .replace(/\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/[ \t]+$/gm, '')
+    .replace(/^\s*$/gm, '')
+    .replace(/\n\n+/g, '\n')
+
+  const lines = cleaned.split('\n')
+  const nonEmptyLines = lines.filter(line => line.trim())
+  if (!nonEmptyLines.length) return cleaned.trim()
+
+  // Find base indentation and detect indentation token size
+  const indentLengths = nonEmptyLines.map(line => line.match(/^\s*/)?.[0].length || 0)
+  const minIndent = Math.min(...indentLengths)
+  const adjustedLengths = indentLengths.map(len => len - minIndent).filter(len => len > 0)
+  const indentSize = adjustedLengths.length ? Math.min(...adjustedLengths) : 2
+
+  // Convert to tab-based indentation
+  return lines
+    .map(line => {
+      if (!line.trim()) return ''
+      const spaces = line.match(/^\s*/)?.[0] || ''
+      const content = line.slice(spaces.length)
+      const remaining = spaces.length - minIndent
+      return remaining > 0 ? '\t'.repeat(Math.floor(remaining / indentSize)) + content : content
+    })
+    .join('\n')
+    .trim()
 }
 
 interface MismatchEntry {

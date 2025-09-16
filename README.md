@@ -79,7 +79,7 @@ Then:
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `read_symbol` | Find and extract code blocks by symbol name(s) from files. Supports multiple symbols via array | `symbols` (string[]), `file_paths[]?`, `limit?` |
+| `read_symbol` | Find and extract code blocks by symbol name(s) from files. Supports multiple symbols via array | `symbols` (string[]), `file_paths[]?`, `limit?`, `optimize?` |
 | `import_symbol` | Import and inspect JavaScript/TypeScript modules and their properties | `module_path`, `property?` |
 | `search_replace` | Search and replace with intelligent whitespace handling and automation-friendly multiple match resolution | `file_path`, `old_string`, `new_string`, `allow_multiple_matches?` |
 | `insert_text` | Insert/replace text at precise line ranges. Perfect for direct line operations from code citations (12:15:file.ts) and surgical edits in large files | `file_path`, `from_line`, `text`, `to_line` |
@@ -100,6 +100,10 @@ read_symbol({symbols: ["generateApiKey"]})
 // Find multiple symbols at once
 read_symbol({symbols: ["User", "UserService", "UserInterface"]})
 // → Returns: all matching symbols with their locations
+
+// Optimize code for AI context (strips comments, normalizes indentation)
+read_symbol({symbols: ["complexFunction"], optimize: true})
+// → Returns: clean, tab-indented code without comments for AI processing
 ```
 
 **2. Surgical Editing (`insert_text`)** - Make precise modifications using exact line ranges:
@@ -235,6 +239,28 @@ node dist/index.js read_symbol "func1,func2,Class*" file.ts
 # Or search current directory
 node dist/index.js read_symbol "functionName"
 ```
+
+## 🧹 **Code Optimization**
+
+The `read_symbol` tool includes an `optimize` parameter that cleans up code for AI processing:
+
+### **What it does:**
+- **Strips comments**: Removes `//`, `/* */`, and `/** */` comments
+- **Collapses newlines**: Multiple consecutive newlines become single newlines  
+- **Normalizes indentation**: Converts spaces to tabs (detects indentation token size automatically)
+- **Removes base indentation**: Eliminates common leading whitespace
+
+### **Usage:**
+```typescript
+// MCP mode - explicit control
+read_symbol({symbols: ["MyClass"], optimize: true})  // optimized
+read_symbol({symbols: ["MyClass"], optimize: false}) // raw code (default)
+
+// CLI mode - always optimized
+mcp-files read_symbol "MyClass" src/
+```
+
+**Perfect for:** Reducing token count in AI context windows while preserving code structure and readability.
 
 ## 🛠️ Troubleshooting
 
