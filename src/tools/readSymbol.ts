@@ -19,9 +19,9 @@ const MAX_SYMBOL_OFFSET = 200
 const MAX_MATCHES = 20
 const DEFAULT_MAX_RESULTS = 5
 const DEFAULT_EXTENSIONS = ['d.ts', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'cts', 'java', 'cs', 'cpp', 'c', 'h', 'hpp', 'cc', 'go', 'rs', 'php', 'swift', 'scss', 'css', 'less', 'graphql', 'gql', 'prisma', 'proto']
-const IGNORED_DIRECTORIES = ['node_modules', '.git']
+const IGNORED_DIRECTORIES = ['node_modules', '.git', 'test', 'tests', 'examples', 'runtime']
 const IGNORED_ROOT_DIRECTORIES = ['dist', 'build', 'out']
-const IGNORED_DEEP_DIRECTORIES = ['test', 'tests', 'examples', 'bin', 'runtime']
+const IGNORED_DEEP_DIRECTORIES = ['bin', 'scripts']
 const IGNORED_FILES = ['*.test.*', '*.spec.*', '_*', '*.min.*']
 
 const BONUS_KEYWORDS = /\b(class|interface|type|function|enum|namespace|module|model|declare|abstract|const|extends|implements)\b/gi

@@ -17,11 +17,11 @@ describe('readSymbol tool', () => {
         input: ['src/**/*.ts'],
         expected: [
           NEGATIVE_FILES,
-          '!{node_modules,.git}/**',
+          '!{node_modules,.git,test,tests,examples,runtime}/**',
           '!dist/**',
           '!build/**',
           '!out/**',
-          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+          '!{*/**/bin,*/**/scripts}',
         ],
       },
 
@@ -30,11 +30,11 @@ describe('readSymbol tool', () => {
         input: ['src/**/*.ts', 'node_modules/@types/**/*.d.ts'],
         expected: [
           NEGATIVE_FILES,
-          '!{.git}/**',
+          '!{.git,test,tests,examples,runtime}/**',
           '!dist/**',
           '!build/**',
           '!out/**',
-          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+          '!{*/**/bin,*/**/scripts}',
         ],
       },
 
@@ -43,10 +43,10 @@ describe('readSymbol tool', () => {
         input: ['dist/assets/**/*.js'],
         expected: [
           NEGATIVE_FILES,
-          '!{node_modules,.git}/**',
+          '!{node_modules,.git,test,tests,examples,runtime}/**',
           '!build/**',
           '!out/**',
-          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+          '!{*/**/bin,*/**/scripts}',
         ],
       },
 
@@ -55,9 +55,9 @@ describe('readSymbol tool', () => {
         input: ['node_modules/', 'dist/', 'build/'],
         expected: [
           NEGATIVE_FILES,
-          '!{.git}/**',
+          '!{.git,test,tests,examples,runtime}/**',
           '!out/**',
-          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+          '!{*/**/bin,*/**/scripts}',
         ],
       },
 
@@ -66,16 +66,17 @@ describe('readSymbol tool', () => {
         input: ['node_modules/', 'dist/', 'build/', 'out/', '.git/'],
         expected: [
           NEGATIVE_FILES,
-          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+          '!{test,tests,examples,runtime}/**',
+          '!{*/**/bin,*/**/scripts}',
         ],
       },
 
       {
         description: 'Should ignore files and remaining directories when most directories explicitly requested',
-        input: ['node_modules/', 'dist/', 'build/', 'out/', '.git/', '*/**/test', '*/**/tests'],
+        input: ['node_modules/', 'dist/', 'build/', 'out/', '.git/', '*/**/bin', '*/**/scripts'],
         expected: [
           NEGATIVE_FILES,
-          '!{*/**/examples,*/**/bin,*/**/runtime}',
+          '!{test,tests,examples,runtime}/**',
         ],
       },
 
@@ -84,11 +85,11 @@ describe('readSymbol tool', () => {
         input: ['src/**/*.ts', 'test/**/*.ts', 'docs/**/*.md'],
         expected: [
           NEGATIVE_FILES,
-          '!{node_modules,.git}/**',
+          '!{node_modules,.git,tests,examples,runtime}/**',
           '!dist/**',
           '!build/**',
           '!out/**',
-          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+          '!{*/**/bin,*/**/scripts}',
         ],
       },
 
@@ -97,24 +98,24 @@ describe('readSymbol tool', () => {
         input: ['.'],
         expected: [
           NEGATIVE_FILES,
-          '!{node_modules,.git}/**',
+          '!{node_modules,.git,test,tests,examples,runtime}/**',
           '!dist/**',
           '!build/**',
           '!out/**',
-          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+          '!{*/**/bin,*/**/scripts}',
         ],
       },
 
       {
-        description: 'Should NOT ignore **/test when explicitly included with glob pattern',
-        input: ['src/**/*.ts', '*/**/test/**/*.ts'],
+        description: 'Should NOT ignore **/bin when explicitly included with glob pattern',
+        input: ['src/**/*.ts', '*/**/bin/**/*.js'],
         expected: [
           NEGATIVE_FILES,
-          '!{node_modules,.git}/**',
+          '!{node_modules,.git,test,tests,examples,runtime}/**',
           '!dist/**',
           '!build/**',
           '!out/**',
-          '!{*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+          '!{*/**/scripts}',
         ],
       },
     ]
