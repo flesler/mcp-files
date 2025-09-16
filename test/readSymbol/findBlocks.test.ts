@@ -395,7 +395,7 @@ function func_123_test() {
       },
       {
         name: 'Huge block',
-        content: ` function myFunc(){\n  var x = 1;\n  ${'a'.repeat(16e3)};\n}\n`,
+        content: ` function myFunc(){\n  var x = 1;\n  ${'a'.repeat(31e3)};\n}\n`,
         symbol: 'myFunc',
         expectedCount: 0,
       },

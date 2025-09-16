@@ -10,61 +10,112 @@ interface TestCase {
 describe('readSymbol tool', () => {
   describe('generateIgnorePatterns function', () => {
     const NEGATIVE_FILES = '!**/{*.test.*,*.spec.*,_*,*.min.*}'
-    const DEFAULT_IGNORED_DIRS = '{node_modules,dist,build,out,.git,*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}'
 
     const testCases: TestCase[] = [
       {
         description: 'Should ignore all default directories when none specified',
         input: ['src/**/*.ts'],
-        expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS}/**`],
+        expected: [
+          NEGATIVE_FILES,
+          '!{node_modules,.git}/**',
+          '!dist/**',
+          '!build/**',
+          '!out/**',
+          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+        ],
       },
 
       {
         description: 'Should NOT ignore node_modules when explicitly included',
         input: ['src/**/*.ts', 'node_modules/@types/**/*.d.ts'],
-        expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('node_modules,', '')}/**`],
+        expected: [
+          NEGATIVE_FILES,
+          '!{.git}/**',
+          '!dist/**',
+          '!build/**',
+          '!out/**',
+          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+        ],
       },
 
       {
         description: 'Should NOT ignore dist when explicitly included',
         input: ['dist/assets/**/*.js'],
-        expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS.replace('dist,', '')}/**`],
+        expected: [
+          NEGATIVE_FILES,
+          '!{node_modules,.git}/**',
+          '!build/**',
+          '!out/**',
+          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+        ],
       },
 
       {
         description: 'Should only ignore directories not explicitly requested',
         input: ['node_modules/', 'dist/', 'build/'],
-        expected: [NEGATIVE_FILES, '!{out,.git,*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}/**'],
+        expected: [
+          NEGATIVE_FILES,
+          '!{.git}/**',
+          '!out/**',
+          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+        ],
       },
 
       {
         description: 'Should ignore files and remaining directories when most directories explicitly requested',
         input: ['node_modules/', 'dist/', 'build/', 'out/', '.git/'],
-        expected: [NEGATIVE_FILES, '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}/**'],
+        expected: [
+          NEGATIVE_FILES,
+          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+        ],
       },
 
       {
         description: 'Should ignore files and remaining directories when most directories explicitly requested',
         input: ['node_modules/', 'dist/', 'build/', 'out/', '.git/', '*/**/test', '*/**/tests'],
-        expected: [NEGATIVE_FILES, '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}/**'],
+        expected: [
+          NEGATIVE_FILES,
+          '!{*/**/examples,*/**/bin,*/**/runtime}',
+        ],
       },
 
       {
         description: 'Should ignore all when no ignored dirs mentioned except test is included',
         input: ['src/**/*.ts', 'test/**/*.ts', 'docs/**/*.md'],
-        expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS}/**`],
+        expected: [
+          NEGATIVE_FILES,
+          '!{node_modules,.git}/**',
+          '!dist/**',
+          '!build/**',
+          '!out/**',
+          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+        ],
       },
 
       {
         description: 'Should ignore all default directories when using current directory pattern "."',
         input: ['.'],
-        expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS}/**`],
+        expected: [
+          NEGATIVE_FILES,
+          '!{node_modules,.git}/**',
+          '!dist/**',
+          '!build/**',
+          '!out/**',
+          '!{*/**/test,*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+        ],
       },
 
       {
         description: 'Should NOT ignore **/test when explicitly included with glob pattern',
         input: ['src/**/*.ts', '*/**/test/**/*.ts'],
-        expected: [NEGATIVE_FILES, `!${DEFAULT_IGNORED_DIRS}/**`],
+        expected: [
+          NEGATIVE_FILES,
+          '!{node_modules,.git}/**',
+          '!dist/**',
+          '!build/**',
+          '!out/**',
+          '!{*/**/tests,*/**/examples,*/**/bin,*/**/runtime}',
+        ],
       },
     ]
 

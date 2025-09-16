@@ -12,14 +12,15 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 // Max number of files to scan
 const MAX_FILE_COUNT = 2000
 // Max length of a block to consider
-const MAX_BLOCK_LENGTH = 15e3
+const MAX_BLOCK_LENGTH = 30e3
 // Max distance from the beginning of the line to the symbol
 const MAX_SYMBOL_OFFSET = 200
 // Abort once we have this many matches
 const MAX_MATCHES = 20
 const DEFAULT_MAX_RESULTS = 5
 const DEFAULT_EXTENSIONS = ['d.ts', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'cts', 'java', 'cs', 'cpp', 'c', 'h', 'hpp', 'cc', 'go', 'rs', 'php', 'swift', 'scss', 'css', 'less', 'graphql', 'gql', 'prisma', 'proto']
-const IGNORED_DIRECTORIES = ['node_modules', 'dist', 'build', 'out', '.git']
+const IGNORED_DIRECTORIES = ['node_modules', '.git']
+const IGNORED_ROOT_DIRECTORIES = ['dist', 'build', 'out']
 const IGNORED_DEEP_DIRECTORIES = ['test', 'tests', 'examples', 'bin', 'runtime']
 const IGNORED_FILES = ['*.test.*', '*.spec.*', '_*', '*.min.*']
 
@@ -78,14 +79,14 @@ const readSymbol = defineTool({
 })
 
 export function mapPattern(pattern: string) {
-  // Also match the @types
-  pattern = pattern.replace(/node_modules\/(\w+)/g, 'node_modules/{@types/,}$1')
-
   const exts = `.{${DEFAULT_EXTENSIONS.join(',')}}`
   const hasKnownExtension = DEFAULT_EXTENSIONS.some(ext => pattern.endsWith(`.${ext}`))
   if (hasKnownExtension) {
     return pattern
   }
+
+  // Also match the @types (only for non-specific files)
+  pattern = pattern.replace(/node_modules\/(\w+)/g, 'node_modules/{@types/,}$1')
   if (pattern === '.' || pattern === './') {
     return `./**/*${exts}`
   }
@@ -106,13 +107,28 @@ export function mapPattern(pattern: string) {
 }
 
 export function generateIgnorePatterns(patterns: string[]): string[] {
-  const dirs = IGNORED_DIRECTORIES
+  const globalDirs = IGNORED_DIRECTORIES
     .filter(dir => !patterns.some(pattern => pattern.includes(`${dir}/`)))
-    .concat(IGNORED_DEEP_DIRECTORIES.map(dir => `*/**/${dir}`))
+  const rootDirs = IGNORED_ROOT_DIRECTORIES
+    .filter(dir => !patterns.some(pattern => pattern.includes(`${dir}/`)))
+  const filteredDeepDirs = IGNORED_DEEP_DIRECTORIES
+    .filter(dir => !patterns.some(pattern => pattern.includes(`*/**/${dir}`)))
+    .map(dir => `*/**/${dir}`)
   const ignore = [`!**/{${IGNORED_FILES.join(',')}}`]
-  if (dirs.length) {
-    ignore.push(`!{${dirs.join(',')}}/**`)
+
+  // Global directories: ignore everywhere
+  if (globalDirs.length) {
+    ignore.push(`!{${globalDirs.join(',')}}/**`)
   }
+  // Root-only directories : only ignore at root level
+  rootDirs.forEach(dir => {
+    ignore.push(`!${dir}/**`)
+  })
+  // Deep directories: ignore when nested deep
+  if (filteredDeepDirs.length) {
+    ignore.push(`!{${filteredDeepDirs.join(',')}}`)
+  }
+
   return ignore
 }
 
