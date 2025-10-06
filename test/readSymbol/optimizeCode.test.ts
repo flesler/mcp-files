@@ -150,6 +150,46 @@ describe('readSymbol tool', () => {
 \treturn 0;
 }`,
       },
+      {
+        name: 'strips single-line triple-quote comments',
+        input: `type User {
+  """Single line description"""
+  id: ID!
+  name: String
+}
+
+def hello():
+    """Single line docstring"""
+    return "world"`,
+        expected: `type User {
+\tid: ID!
+\tname: String
+}
+def hello():
+\t\treturn "world"`,
+      },
+      {
+        name: 'strips multi-line triple-quote comments',
+        input: `type User {
+  """
+  This is a multi-line
+  GraphQL description
+  """
+  id: ID!
+  name: String
+}
+
+def hello():
+    """Python docstring
+    with multiple lines"""
+    return "world"`,
+        expected: `type User {
+\tid: ID!
+\tname: String
+}
+def hello():
+\t\treturn "world"`,
+      },
     ]
 
     testCases.forEach(({ name, input, expected }) => {

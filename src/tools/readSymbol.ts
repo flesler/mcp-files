@@ -283,6 +283,7 @@ export function optimizeCode(text: string): string {
   const cleaned = text
     .replace(/\/\/.*$/gm, '')
     .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/"""[\s\S]*?"""/g, '')
     .replace(/[ \t]+$/gm, '')
     .replace(/^\s*$/gm, '')
     .replace(/\n\n+/g, '\n')
