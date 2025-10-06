@@ -281,12 +281,13 @@ function formatResult(block: Block, optimize = false): string {
 export function optimizeCode(text: string): string {
   // Strip comments and clean up whitespace
   const cleaned = text
-    .replace(/\/\/.*$/gm, '')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/"""[\s\S]*?"""/g, '')
-    .replace(/[ \t]+$/gm, '')
-    .replace(/^\s*$/gm, '')
-    .replace(/\n\n+/g, '\n')
+    .replace(/([^:])\/\/.*$/gm, '$1') // JS/TS line comments (avoid URLs with ://)
+    .replace(/\/\*[\s\S]*?\*\//g, '') // JS/TS/CSS block comments
+    .replace(/"""[\s\S]*?"""/g, '') // GraphQL/Python triple-quote strings
+    .replace(/^\s*#.*/gm, '') // Bash/Python/GraphQL/YAML line comments
+    .replace(/[ \t]+$/gm, '') // Trailing whitespace
+    .replace(/^\s*$/gm, '') // Empty lines
+    .replace(/\n\n+/g, '\n') // Multiple newlines
 
   const lines = cleaned.split('\n')
   const nonEmptyLines = lines.filter(line => line.trim())

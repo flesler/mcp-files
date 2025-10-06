@@ -151,6 +151,39 @@ describe('readSymbol tool', () => {
 }`,
       },
       {
+        name: 'strips line-start hash comments (Bash/Python/GraphQL)',
+        input: `# This is a bash comment
+type User {
+  id: ID!
+  # another comment
+  name: String
+}
+
+def hello():
+    # Python comment
+    x = 1
+    return x`,
+        expected: `type User {
+\tid: ID!
+\tname: String
+}
+def hello():
+\t\tx = 1
+\t\treturn x`,
+      },
+      {
+        name: 'preserves hash in strings and code',
+        input: `def get_color():
+    color = "#FF0000"
+    url = "https://example.com#anchor"
+    # This comment is removed
+    return color`,
+        expected: `def get_color():
+\tcolor = "#FF0000"
+\turl = "https://example.com#anchor"
+\treturn color`,
+      },
+      {
         name: 'strips single-line triple-quote comments',
         input: `type User {
   """Single line description"""
