@@ -23,7 +23,7 @@
     "start": "dist/index.js",
     "start:check": "dist/index.js --check",
     "start:http": "TRANSPORT=http dist/index.js",
-    "dev": "npm run build:watch -- --onSuccess \"node dist/index.js\"",
+    "dev": "npm run build:watch",
     "dev:bg": "rimraf dev.log && npm run dev > dev.log 2>&1",
     "cli": "npm run build && npm start --",
     "inspect": "npx fastmcp inspect src/index.ts",
