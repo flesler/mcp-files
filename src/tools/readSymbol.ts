@@ -69,7 +69,7 @@ const readSymbol = defineTool({
 
     let output = results
       .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
+      .slice(0, limit * symbols.length)
       .map(block => formatResult(block, optimize))
       .join('\n\n')
     if (totalFound > results.length) {
@@ -81,28 +81,30 @@ const readSymbol = defineTool({
 
 export function mapPattern(pattern: string) {
   const exts = `.{${DEFAULT_EXTENSIONS.join(',')}}`
-  const hasKnownExtension = DEFAULT_EXTENSIONS.some(ext => pattern.endsWith(`.${ext}`))
-  if (hasKnownExtension) {
+  if (pattern === '*' || pattern === '*.*') {
+    return `*${exts}`
+  }
+  // If pattern already has an extension, return as-is
+  if (/[/*\w]\.\w+$/.test(pattern)) {
     return pattern
   }
 
-  // Also match the @types (only for non-specific files)
+  const hasGlobChars = /[*?[{]/.test(pattern)
+
+  // Implicitly include @types/ packages
   pattern = pattern.replace(/node_modules\/(\w+)/g, 'node_modules/{@types/,}$1')
-  if (pattern === '.' || pattern === './') {
-    return `./**/*${exts}`
-  }
+  // Trailing slash = explicit directory, search recursively
   if (pattern.endsWith('/')) {
-    const basePath = pattern.replace(/\/$/, '')
-    return `${basePath}/**/*${exts}`
+    return `${pattern}**/*${exts}`
   }
-  const hasGlobChars = pattern.includes('*') || pattern.includes('?') || pattern.includes('[')
-  const lastSegment = pattern.split('/').pop() || ''
-  const hasFileExtension = /\.\w+$/.test(lastSegment) && DEFAULT_EXTENSIONS.includes(lastSegment.split('.').pop()!)
-  if (!hasGlobChars && !hasFileExtension) {
-    return `${pattern}/**/*${exts}`
-  }
-  if (pattern === '*' || pattern === '*.*') {
-    return `*${exts}`
+
+  if (!hasGlobChars) {
+    // No slash and no dot = simple directory name
+    if (!/[/\\.]/.test(pattern)) {
+      return `${pattern}/**/*${exts}`
+    }
+    // Otherwise trust as-is (file path)
+    return pattern
   }
   return `${pattern}${exts}`
 }

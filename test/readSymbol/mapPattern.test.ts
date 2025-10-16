@@ -21,8 +21,8 @@ describe('readSymbol tool', () => {
       },
       {
         input: 'package.json',
-        expected: `package.json/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'JSON file treated as directory (JSON support removed)',
+        expected: 'package.json',
+        description: 'JSON file returned as-is (no glob chars)',
       },
       {
         input: 'styles.css',
@@ -31,8 +31,8 @@ describe('readSymbol tool', () => {
       },
       {
         input: 'README.md',
-        expected: `README.md/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Markdown file with extension (treated as directory since .md not in DEFAULT_EXTENSIONS)',
+        expected: 'README.md',
+        description: 'Markdown file returned as-is (no glob chars)',
       },
       {
         input: 'types.d.ts',
@@ -48,52 +48,52 @@ describe('readSymbol tool', () => {
       // Current directory patterns
       {
         input: '.',
-        expected: `./**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Current directory (dot)',
+        expected: '.',
+        description: 'Current directory returned as-is (no trailing slash)',
       },
       {
         input: './',
         expected: `./**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Current directory with slash',
+        description: 'Current directory with trailing slash searches recursively',
       },
 
       // Directory paths (no trailing slash)
       {
         input: 'src',
         expected: `src/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Simple directory name',
+        description: 'Simple directory name (no slash, no dot) searches recursively',
       },
       {
         input: 'src/components',
-        expected: `src/components/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Nested directory path',
+        expected: 'src/components',
+        description: 'Nested directory path (has slash) returned as-is',
       },
       {
         input: 'test/unit/helpers',
-        expected: `test/unit/helpers/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Deep nested directory',
+        expected: 'test/unit/helpers',
+        description: 'Deep nested directory (has slash) returned as-is',
       },
       {
         input: 'backend',
         expected: `backend/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Backend directory',
+        description: 'Backend directory (no slash, no dot) searches recursively',
       },
 
       // Directory paths (with trailing slash)
       {
         input: 'src/',
         expected: `src/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Directory with trailing slash',
+        description: 'Directory with trailing slash searches recursively',
       },
       {
         input: 'api/routes/',
         expected: `api/routes/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Nested directory with trailing slash',
+        description: 'Nested directory with trailing slash searches recursively',
       },
       {
         input: 'frontend/components/',
         expected: `frontend/components/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Deep directory with trailing slash',
+        description: 'Deep directory with trailing slash searches recursively',
       },
 
       // Common glob patterns
@@ -158,24 +158,24 @@ describe('readSymbol tool', () => {
       {
         input: 'README',
         expected: `README/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'README without extension (treated as directory)',
+        description: 'README (no slash, no dot) treated as directory',
       },
       {
         input: 'Dockerfile',
         expected: `Dockerfile/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Dockerfile without extension (treated as directory)',
+        description: 'Dockerfile (no slash, no dot) treated as directory',
       },
       {
         input: 'Makefile',
         expected: `Makefile/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Makefile without extension (treated as directory)',
+        description: 'Makefile (no slash, no dot) treated as directory',
       },
 
       // Complex nested patterns
       {
         input: 'apps/frontend/src',
-        expected: `apps/frontend/src/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Deep nested application directory',
+        expected: 'apps/frontend/src',
+        description: 'Deep nested application directory (has slash) returned as-is',
       },
       {
         input: 'packages/*/src',
@@ -184,45 +184,50 @@ describe('readSymbol tool', () => {
       },
       {
         input: 'libs/shared',
-        expected: `libs/shared/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Shared library directory',
+        expected: 'libs/shared',
+        description: 'Shared library directory (has slash) returned as-is',
       },
 
       // Edge cases with mixed dots and paths
       {
         input: 'src.backup',
-        expected: `src.backup/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Directory name with dot (no extension)',
+        expected: 'src.backup',
+        description: 'Directory name with dot returned as-is (treated as file)',
       },
       {
         input: 'node_modules',
         expected: `node_modules/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'node_modules directory',
+        description: 'node_modules (no slash, no dot) searches recursively',
       },
       {
         input: 'node_modules/lodash',
-        expected: `node_modules/{@types/,}lodash/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'node_modules package should include @types transformation',
+        expected: 'node_modules/{@types/,}lodash',
+        description: 'node_modules package includes @types transformation',
       },
       {
         input: 'node_modules/react/lib',
-        expected: `node_modules/{@types/,}react/lib/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'node_modules package with subpath should include @types transformation',
+        expected: 'node_modules/{@types/,}react/lib',
+        description: 'node_modules package with subpath includes @types transformation',
       },
       {
         input: 'node_modules/@types/node',
-        expected: `node_modules/@types/node/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'node_modules @types package should not be double-transformed',
+        expected: 'node_modules/@types/node',
+        description: 'node_modules @types package not double-transformed',
       },
       {
         input: 'src/node_modules/utils',
-        expected: `src/node_modules/{@types/,}utils/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'nested node_modules should also get @types transformation',
+        expected: 'src/node_modules/{@types/,}utils',
+        description: 'nested node_modules includes @types transformation',
       },
       {
         input: '.git',
+        expected: '.git',
+        description: 'Hidden directory (has dot) returned as-is - use .git/ to search recursively',
+      },
+      {
+        input: '.git/',
         expected: `.git/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Hidden directory',
+        description: 'Hidden directory with trailing slash searches recursively',
       },
 
       // Already have glob patterns with extensions - should pass through
@@ -233,8 +238,8 @@ describe('readSymbol tool', () => {
       },
       {
         input: '**/*.json',
-        expected: `**/*.json.${DEFAULT_EXTENSIONS}`,
-        description: 'JSON pattern gets extensions appended (JSON support removed)',
+        expected: '**/*.json',
+        description: 'JSON pattern already has extension, returned as-is',
       },
       {
         input: 'test/**/*.spec.js',
@@ -245,49 +250,44 @@ describe('readSymbol tool', () => {
       // Patterns that would confuse the logic
       {
         input: 'src.old/backup',
-        expected: `src.old/backup/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Directory path with dots in directory name',
+        expected: 'src.old/backup',
+        description: 'Directory path with dots (has slash) returned as-is',
       },
       {
         input: 'weird.folder.name',
-        expected: `weird.folder.name/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Directory with multiple dots but no extension',
+        expected: 'weird.folder.name',
+        description: 'Directory with multiple dots (has dot) returned as-is',
       },
       {
         input: 'folder/file.with.dots',
-        expected: `folder/file.with.dots/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Path with dots but no recognized extension',
+        expected: 'folder/file.with.dots',
+        description: 'Path with dots (has slash) returned as-is',
       },
 
       // Empty and minimal cases
       {
         input: '/',
         expected: `/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Root directory',
+        description: 'Root directory with trailing slash searches recursively',
       },
 
-      // Ignored directories (should still work normally until we add ignore logic)
-      {
-        input: 'node_modules',
-        expected: `node_modules/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'node_modules directory',
-      },
+      // Other commonly ignored directories
       {
         input: 'dist/assets',
-        expected: `dist/assets/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'dist subdirectory',
+        expected: 'dist/assets',
+        description: 'dist subdirectory (has slash) returned as-is',
       },
       {
         input: 'build',
         expected: `build/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'build directory',
+        description: 'build directory (no slash, no dot) searches recursively',
       },
 
       // Windows-style paths
       {
         input: 'src\\components',
-        expected: `src\\components/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Windows-style directory path',
+        expected: 'src\\components',
+        description: 'Windows-style directory path (has backslash) returned as-is',
       },
 
       // Files with multiple extensions
@@ -304,12 +304,34 @@ describe('readSymbol tool', () => {
       {
         input: 'a',
         expected: `a/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Single letter directory',
+        description: 'Single letter directory (no slash, no dot) searches recursively',
       },
       {
         input: 'A',
         expected: `A/**/*.${DEFAULT_EXTENSIONS}`,
-        description: 'Single uppercase letter directory',
+        description: 'Single uppercase letter directory (no slash, no dot) searches recursively',
+      },
+
+      // Absolute paths and shell files
+      {
+        input: '/home/user/.bash_functions',
+        expected: '/home/user/.bash_functions',
+        description: 'Absolute path to shell file returned as-is (no glob chars)',
+      },
+      {
+        input: '/etc/config.conf',
+        expected: '/etc/config.conf',
+        description: 'Absolute path to config file returned as-is (no glob chars)',
+      },
+      {
+        input: '.bashrc',
+        expected: '.bashrc',
+        description: 'Dotfile without extension returned as-is (no glob chars)',
+      },
+      {
+        input: '/home/user/.bashrc',
+        expected: '/home/user/.bashrc',
+        description: 'Absolute path to dotfile has extension pattern, returned as-is',
       },
     ]
 
