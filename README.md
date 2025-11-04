@@ -8,6 +8,10 @@
 
 Enables agents to quickly find and edit code in a codebase with surgical precision. Find symbols, edit them everywhere.
 
+<a href="https://glama.ai/mcp/servers/@flesler/mcp-tools">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@flesler/mcp-tools/badge" alt="Tools MCP server" />
+</a>
+
 ## 📋 Table of Contents
 
 - [🚀 Quick Start](#-quick-start)
